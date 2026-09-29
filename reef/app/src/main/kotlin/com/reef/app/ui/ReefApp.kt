@@ -233,12 +233,12 @@ private fun FactionTile(f: FactionId, seat: Int, modifier: Modifier, onInfo: () 
                 .background(if (selected) Reef.faction(f).copy(alpha = 0.22f) else Reef.surface, shape)
                 .border(if (selected) 2.dp else 1.dp, if (selected) Reef.faction(f) else Reef.line, shape)
                 .clickable(onClick = onClick)
-                .padding(vertical = 5.dp, horizontal = 3.dp),
+                .padding(vertical = 5.dp, horizontal = 1.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(1.dp),
         ) {
             Portrait(f, 44.dp)
-            Text(plate.name, color = Reef.ink, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, maxLines = 2, lineHeight = 12.sp)
+            Text(plate.name, color = Reef.ink, fontSize = 9.5.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, maxLines = 2, lineHeight = 11.sp)
             Text(plate.role, color = Reef.muted, fontSize = 9.sp, maxLines = 1, lineHeight = 10.sp)
             Text("●".repeat(plate.complexity) + "○".repeat(4 - plate.complexity), color = Reef.faction(f), fontSize = 8.sp, lineHeight = 9.sp)
         }

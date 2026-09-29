@@ -112,15 +112,23 @@ fun Diagram(glyphs: List<Glyph>, size: Dp = 26.dp) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         for (g in glyphs) {
             when (g) {
-                is Glyph.Pic -> Box(contentAlignment = Alignment.Center) {
-                    ArtImage(g.image, size)
-                    if (g.count != null) CountTag(g.count, Modifier.align(Alignment.BottomEnd).offset(x = 6.dp, y = 4.dp))
+                // A short count sits on the picture's corner; a longer one goes beside it.
+                is Glyph.Pic -> if (g.count != null && g.count.length > 2) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        ArtImage(g.image, size)
+                        Text(g.count, color = Reef.ink, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 2.dp))
+                    }
+                } else {
+                    Box(contentAlignment = Alignment.Center) {
+                        ArtImage(g.image, size)
+                        if (g.count != null) CountTag(g.count, Modifier.align(Alignment.BottomEnd).offset(x = 6.dp, y = 4.dp))
+                    }
                 }
                 is Glyph.Word -> Text(g.text, color = Reef.muted, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                 is Glyph.Vp -> VpBadge(g.text)
                 is Glyph.Card -> CardGlyph(g.suit, g.count, size)
             }
-            if (g is Glyph.Pic && g.count != null) Spacer(Modifier.width(4.dp))
+            if (g is Glyph.Pic && g.count != null && g.count.length <= 2) Spacer(Modifier.width(4.dp))
         }
     }
 }
