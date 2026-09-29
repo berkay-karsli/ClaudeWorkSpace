@@ -324,7 +324,7 @@ private fun DrawScope.drawReef(g: GameState, reef: Int, t: MapTransform, measure
     }
     // Each reef is a print on paper: its scenery printed faintly under the pieces.
     drawCircle(Brush.radialGradient(listOf(Reef.paperLight, Reef.paperDark), center = Offset(c.x, c.y - 10f * s), radius = R * s * 1.2f), radius = R * s, center = c)
-    image(art[LANDMARKS[reef] ?: suitScenery(suit)], Offset(c.x, c.y + 4f * s), 70f * s, alpha = 0.32f)
+    image(art[LANDMARKS[reef] ?: suitScenery(suit)], Offset(c.x, c.y + 4f * s), 70f * s, alpha = 0.62f)
     // The rim shows who rules here: the ruler's color, or the suit's when nobody does.
     val rim = ruler?.let { Reef.faction(g.players[it].faction) } ?: suitColor
     val rimWidth = if (ruler != null) 5f else 3f
