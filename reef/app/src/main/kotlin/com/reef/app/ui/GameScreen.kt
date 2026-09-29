@@ -140,7 +140,7 @@ fun GameScreen(controller: GameController, onExit: () -> Unit, onRematch: () -> 
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Scoreboard(g, Modifier.weight(1f)) { board = it }
+                    Scoreboard(g, version, Modifier.weight(1f)) { board = it }
                     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                         SmallButton("Rules") { showRules = true }
                         SmallButton("Log") { showLog = true }
@@ -155,13 +155,13 @@ fun GameScreen(controller: GameController, onExit: () -> Unit, onRematch: () -> 
                         needsHandoff -> Waiting(g.players[d.player].faction, "plays next")
                         else -> {
                             Prompt(g, d)
-                            Supply(g, d.player)
-                            FactionStatus(g, d.player)
+                            Supply(g, d.player, version)
+                            FactionStatus(g, d.player, version)
                             StepControls(controller, d, step!!, pick, matching)
                         }
                     }
-                    Hand(controller, (step as? Step.ChooseCard)?.cards ?: emptySet(), d)
-                    LastEvents(g)
+                    Hand(controller, (step as? Step.ChooseCard)?.cards ?: emptySet(), d, version)
+                    LastEvents(g, version)
                 }
             }
         }
@@ -171,7 +171,7 @@ fun GameScreen(controller: GameController, onExit: () -> Unit, onRematch: () -> 
             BattlePopup(battle) { controller.seenBattle = battle.seq }
         }
         if (g.phase == Phase.OVER) GameOver(g, onExit, onRematch)
-        if (showLog) LogDialog(g) { showLog = false }
+        if (showLog) LogDialog(g, version) { showLog = false }
         if (showRules) RulesDialog(g.players.map { it.faction }) { showRules = false }
         board?.let { f -> RulesDialog(listOf(f) + g.players.map { it.faction }.filter { it != f }) { board = null } }
     }
@@ -320,7 +320,9 @@ private fun Instruction(text: String) {
 
 /** Every faction's portrait and VP in one row. Tap one to open its board. */
 @Composable
-private fun Scoreboard(g: GameState, modifier: Modifier = Modifier, onOpen: (FactionId) -> Unit) {
+// The game state changes in place, so everything drawn from it also takes [version]: Compose then
+// redraws it after every move instead of skipping it because the state object is the same one.
+private fun Scoreboard(g: GameState, @Suppress("UNUSED_PARAMETER") version: Int, modifier: Modifier = Modifier, onOpen: (FactionId) -> Unit) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
         g.players.forEachIndexed { i, pl ->
             val turn = g.phase != Phase.OVER && g.current == i
@@ -340,7 +342,7 @@ private fun Scoreboard(g: GameState, modifier: Modifier = Modifier, onOpen: (Fac
 
 /** What the faction on turn has left, one line under the prompt. */
 @Composable
-private fun Supply(g: GameState, p: Int) {
+private fun Supply(g: GameState, p: Int, @Suppress("UNUSED_PARAMETER") version: Int) {
     val pl = g.players[p]
     val extra = buildList {
         add(Game.rules(pl.faction).supplySummary(g, p))
@@ -351,7 +353,7 @@ private fun Supply(g: GameState, p: Int) {
 }
 
 @Composable
-private fun LastEvents(g: GameState) {
+private fun LastEvents(g: GameState, @Suppress("UNUSED_PARAMETER") version: Int) {
     val lines = g.log.takeLast(6).reversed()
     Column(Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
         SectionTitle("Latest")
@@ -369,7 +371,7 @@ private fun LastEvents(g: GameState) {
 }
 
 @Composable
-private fun Hand(controller: GameController, selectable: Set<Int>, d: Decision?) {
+private fun Hand(controller: GameController, selectable: Set<Int>, d: Decision?, @Suppress("UNUSED_PARAMETER") version: Int) {
     val g = controller.game
     val viewer = controller.viewer
     if (g.players.none { it.human }) return

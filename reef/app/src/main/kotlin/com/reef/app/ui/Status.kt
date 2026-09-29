@@ -44,7 +44,7 @@ import com.reef.engine.TurtlesState
  * each turtle's food, the Hermit Crabs' Till, the Anglerfish's lures, the Remoras' rides.
  */
 @Composable
-fun FactionStatus(g: GameState, p: Int) {
+fun FactionStatus(g: GameState, p: Int, @Suppress("UNUSED_PARAMETER") version: Int) {
     when (val s = g.players[p].fs) {
         is CuttlefishState -> {
             val held = CuttlefishRules.held(g)

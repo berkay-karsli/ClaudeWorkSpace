@@ -41,6 +41,25 @@ private fun shot(out: File, name: String, content: @Composable () -> Unit) {
     println("wrote $name.png")
 }
 
+/**
+ * Renders [controller]'s game, runs [change] on the live screen, and renders again: the second
+ * picture must show the new state (scores, hand, latest events), not the first one's.
+ */
+@OptIn(ExperimentalComposeUiApi::class)
+private fun shotAfter(out: File, name: String, controller: GameController, change: () -> Unit) {
+    val d = 2f
+    val scene = ImageComposeScene(width = (800 * d).toInt(), height = (370 * d).toInt(), density = Density(d)) {
+        ReefTheme { Box(Modifier.fillMaxSize().background(Reef.night)) { GameScreen(controller, {}, {}) } }
+    }
+    scene.render(0)
+    change()
+    scene.render(1_000_000_000L)
+    val image = scene.render(2_000_000_000L)
+    File(out, "$name.png").writeBytes(image.encodeToData(EncodedImageFormat.PNG)!!.bytes)
+    scene.close()
+    println("wrote $name.png")
+}
+
 /** Every seat played by a person, so the panel shows their controls. */
 private fun asHumans(g: GameState) = GameState.fromJson(g.toJson().replace("\"human\":false", "\"human\":true"))
 
@@ -137,4 +156,17 @@ fun main(args: Array<String>) {
     if (over != null) shot(out, "42-game-over") { GameScreen(GameController(over, MemoryStore), {}, {}) }
 
     shot(out, "43-shared-rules") { RulesDialog(emptyList()) {} }
+
+    // Scores change during play: moves made on a live screen must show up in the scoreboard.
+    val live = playUntil(lineups[0], 70) { it.round >= 2 && it.phase == Phase.DAWN } ?: return
+    val c = controllerFor(live, live.players[live.current].faction)
+    val before = live.players.map { it.vp }
+    shotAfter(out, "44-scores-update-live", c) {
+        val bot = Bot(Random(70), samples = 1)
+        var steps = 0
+        while (live.players.map { it.vp } == before && live.phase != Phase.OVER && steps++ < 400) c.apply(bot.choose(live, Game.decision(live)!!))
+        c.seenBattle = live.lastBattle?.seq ?: -1
+        c.viewer = live.current
+        println("scores before ${before}, after ${live.players.map { it.vp }}")
+    }
 }

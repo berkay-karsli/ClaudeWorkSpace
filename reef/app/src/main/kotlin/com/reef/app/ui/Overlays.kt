@@ -54,7 +54,7 @@ private fun Sheet(title: String, onClose: () -> Unit, content: @Composable Colum
 }
 
 @Composable
-fun LogDialog(g: GameState, onClose: () -> Unit) {
+fun LogDialog(g: GameState, @Suppress("UNUSED_PARAMETER") version: Int, onClose: () -> Unit) {
     Sheet("What happened", onClose) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             for (line in g.log.reversed()) {
