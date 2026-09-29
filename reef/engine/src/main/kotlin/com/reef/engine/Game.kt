@@ -286,7 +286,7 @@ object Game {
         g.phase = Phase.DAWN
         log(g, "Round ${g.round}, ${pl.faction.display} to play.")
         pl.dominance?.let { card ->
-            if (dominanceMet(g, p, card)) win(g, p, "${pl.faction.display} win by Dominance: ${Cards[card].describe().substringAfter(": ")}")
+            if (dominanceMet(g, p, card)) win(g, p, "${pl.faction.display}: victory by ${Cards[card].name}.")
         }
         rules(g, p).beginTurn(g, p)
     }
@@ -652,7 +652,7 @@ object Game {
         }
         pl.vp += n
         log(g, "${pl.faction.display}: +$n VP for $why (${pl.vp} VP).")
-        if (pl.vp >= WIN_VP) win(g, p, "${pl.faction.display} reach $WIN_VP VP.")
+        if (pl.vp >= WIN_VP) win(g, p, "${pl.faction.display}: $WIN_VP VP, the first to get there.")
     }
 
     /** Losing VP, for the Octopus's recoil. VP never goes below zero. */

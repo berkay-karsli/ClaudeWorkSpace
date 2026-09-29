@@ -343,12 +343,13 @@ private fun DrawScope.drawReef(g: GameState, reef: Int, t: MapTransform, measure
 
     // Tokens that don't fill slots, in a row: Blood, eggs, lures, pigments.
     val tokens = rs.pieces.filter { !it.type.fillsSlot }.groupBy { Triple(it.type, it.variant, it.suit) }
-    var tx = c.x - (tokens.size - 1) * 10f * s
+    var tx = c.x - (tokens.size - 1) * 13f * s
     for ((_, group) in tokens) {
-        val tc = Offset(tx, c.y + 17f * s)
-        image(art[Art.piece(group.first())], tc, 18f * s)
-        if (group.size > 1) countTag(measurer, "${group.size}", Offset(tc.x + 8f * s, tc.y + 6f * s), s * 0.8f)
-        tx += 20f * s
+        val tc = Offset(tx, c.y + 19f * s)
+        val big = group.first().type == PieceType.LURE
+        image(art[Art.piece(group.first())], tc, (if (big) 30f else 24f) * s)
+        if (group.size > 1) countTag(measurer, "${group.size}", Offset(tc.x + 10f * s, tc.y + 7f * s), s * 0.8f)
+        tx += 26f * s
     }
 
     // Warriors: a medallion per faction, with riders and shells beside it.
@@ -367,8 +368,10 @@ private fun DrawScope.drawReef(g: GameState, reef: Int, t: MapTransform, measure
         drawCircle(Brush.radialGradient(listOf(Color(0xFF2C6E86), Color(0xFF0E3042)), center = mc, radius = 15f * s), radius = 15f * s, center = mc)
         drawCircle(Reef.faction(f), radius = 15f * s, center = mc, style = Stroke(width = 2.2f * s))
         image(art[Art.portrait(f)], mc, 26f * s)
-        val shownCount = if (f == FactionId.OCTOPUS && octo?.mantle == reef) "${n - 1}+M" else "$n"
-        countTag(measurer, shownCount, Offset(mc.x + 12f * s, mc.y + 11f * s), s, fill = Reef.faction(f), ink = Reef.night)
+        val mantle = f == FactionId.OCTOPUS && octo?.mantle == reef
+        // The count is the warriors here; for the octopus, its arms, with the Mantle shown as a head.
+        countTag(measurer, "${if (mantle) n - 1 else n}", Offset(mc.x + 12f * s, mc.y + 11f * s), s, fill = Reef.faction(f), ink = Reef.night)
+        if (mantle) image(art[Icons.mantle], Offset(mc.x + 13f * s, mc.y - 12f * s), 18f * s)
         if (riders > 0) {
             val rc = Offset(mc.x - 15f * s, mc.y + 11f * s)
             image(art[Portraits.remora], rc, 18f * s)

@@ -139,7 +139,7 @@ object TurtlesRules : FactionRules {
 
     override fun supplySummary(g: GameState, p: Int): String {
         val s = st(g, p)
-        return "${s.turtles.size} turtles · ${s.eggs} eggs and ${s.nests} nests left"
+        return "${s.turtles.size} turtle${if (s.turtles.size == 1) "" else "s"} · ${s.eggs} eggs and ${s.nests} nests left"
     }
 
     override fun value(g: GameState, p: Int, self: Boolean): Double {

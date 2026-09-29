@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -138,13 +139,13 @@ fun GameScreen(controller: GameController, onExit: () -> Unit, onRematch: () -> 
                 Modifier.width(340.dp).fillMaxHeight().background(Reef.surface).padding(horizontal = 10.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Scoreboard(g, Modifier.weight(1f)) { board = it }
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        SmallButton("Rules") { showRules = true }
-                        SmallButton("Log") { showLog = true }
-                        SmallButton("Menu") { onExit() }
-                    }
+                    SmallButton("Rules") { showRules = true }
+                    Spacer(Modifier.width(4.dp))
+                    SmallButton("Log") { showLog = true }
+                    Spacer(Modifier.width(4.dp))
+                    SmallButton("Menu") { onExit() }
                 }
                 Line()
                 Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -154,6 +155,8 @@ fun GameScreen(controller: GameController, onExit: () -> Unit, onRematch: () -> 
                         needsHandoff -> Waiting(g.players[d.player].faction, "plays next")
                         else -> {
                             Prompt(g, d)
+                            Supply(g, d.player)
+                            FactionStatus(g, d.player)
                             StepControls(controller, d, step!!, pick, matching)
                         }
                     }
@@ -248,7 +251,7 @@ private fun StepControls(controller: GameController, d: Decision, step: Step, pi
             for (row in kinds.chunked(2)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     for (k in row) {
-                        ActionCard(f, k, d.options.count { it.kind == k }, selected = false, modifier = Modifier.weight(1f)) { controller.pick = Pick(kind = k) }
+                        ActionCard(f, k, d.options.count { it.kind == k }, selected = false, modifier = Modifier.weight(1f), compact = true) { controller.pick = Pick(kind = k) }
                     }
                     if (row.size == 1) Spacer(Modifier.weight(1f))
                 }
@@ -315,37 +318,36 @@ private fun Instruction(text: String) {
     Text(text, color = Reef.ink, fontSize = 13.sp, fontStyle = FontStyle.Italic)
 }
 
+/** Every faction's portrait and VP in one row. Tap one to open its board. */
 @Composable
 private fun Scoreboard(g: GameState, modifier: Modifier = Modifier, onOpen: (FactionId) -> Unit) {
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
         g.players.forEachIndexed { i, pl ->
             val turn = g.phase != Phase.OVER && g.current == i
-            Row(
-                Modifier.fillMaxWidth()
-                    .background(if (turn) Color(0xFF173F4A) else Color.Transparent, RoundedCornerShape(8.dp))
-                    .clickable { onOpen(pl.faction) }
-                    .padding(horizontal = 4.dp, vertical = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Portrait(pl.faction, 30.dp, ring = if (turn) 2.5.dp else 1.5.dp)
-                Spacer(Modifier.width(6.dp))
-                Column(Modifier.weight(1f)) {
+            Box(Modifier.clickable { onOpen(pl.faction) }.padding(bottom = 4.dp, end = 6.dp)) {
+                Portrait(pl.faction, 38.dp, ring = if (turn) 3.dp else 1.5.dp)
+                VpCoin(pl.vp, Modifier.align(Alignment.BottomEnd).offset(x = 6.dp, y = 4.dp))
+                if (!pl.human) {
                     Text(
-                        pl.faction.display + (if (pl.human) "" else " · bot"),
-                        color = Reef.ink, fontWeight = if (turn) FontWeight.Bold else FontWeight.Normal, fontSize = 13.sp,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        "bot", color = Reef.night, fontSize = 8.sp, fontWeight = FontWeight.Bold,
+                        modifier = Modifier.align(Alignment.TopStart).background(Reef.muted, RoundedCornerShape(4.dp)).padding(horizontal = 2.dp),
                     )
-                    val extra = buildList {
-                        pl.dominance?.let { add("Dominance: ${Cards[it].suit.label}") }
-                        add(Game.rules(pl.faction).supplySummary(g, i))
-                        if (pl.gear.isNotEmpty()) add("Gear: " + pl.gear.joinToString { Cards[it].name })
-                    }
-                    Text(extra.joinToString(" · "), color = Reef.muted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                VpBadge("${pl.vp}", 22.dp)
             }
         }
     }
+}
+
+/** What the faction on turn has left, one line under the prompt. */
+@Composable
+private fun Supply(g: GameState, p: Int) {
+    val pl = g.players[p]
+    val extra = buildList {
+        add(Game.rules(pl.faction).supplySummary(g, p))
+        pl.dominance?.let { add("Dominance: ${Cards[it].suit.label}") }
+        if (pl.gear.isNotEmpty()) add("Gear: " + pl.gear.joinToString { Cards[it].name })
+    }
+    Text(extra.joinToString(" · "), color = Reef.muted, fontSize = 11.sp)
 }
 
 @Composable
@@ -457,7 +459,8 @@ private fun GameOver(g: GameState, onExit: () -> Unit, onRematch: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             if (winner != null) Portrait(winner.faction, 90.dp, ring = 3.dp)
-            Text(if (winner != null) "${winner.faction.display} win" else "Game over", color = Reef.ink, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
+            if (winner != null) SectionTitle("Victory")
+            Text(winner?.faction?.display ?: "Game over", color = Reef.ink, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
             Text(g.winText, color = Reef.muted)
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 for (pl in g.players.sortedByDescending { it.vp }) {
@@ -479,7 +482,7 @@ private fun GameOver(g: GameState, onExit: () -> Unit, onRematch: () -> Unit) {
 @Composable
 private fun SmallButton(text: String, onClick: () -> Unit) {
     Box(
-        Modifier.width(56.dp).height(26.dp).border(1.dp, Reef.line, RoundedCornerShape(8.dp)).clickable(onClick = onClick),
+        Modifier.width(46.dp).height(26.dp).border(1.dp, Reef.line, RoundedCornerShape(8.dp)).clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) { Text(text, color = Reef.muted, fontSize = 12.sp) }
 }

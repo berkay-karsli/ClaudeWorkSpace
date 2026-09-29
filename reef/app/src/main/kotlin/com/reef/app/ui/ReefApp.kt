@@ -169,7 +169,7 @@ internal fun SetupScreen(onStart: (List<Seat>) -> Unit, onBack: () -> Unit, init
                 }
             }
         }
-        Column(Modifier.width(290.dp).fillMaxHeight().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.width(270.dp).fillMaxHeight().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("The table", color = Reef.ink, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                 OutlinedButton(onClick = onBack) { Text("Back", color = Reef.ink) }
@@ -233,13 +233,13 @@ private fun FactionTile(f: FactionId, seat: Int, modifier: Modifier, onInfo: () 
                 .background(if (selected) Reef.faction(f).copy(alpha = 0.22f) else Reef.surface, shape)
                 .border(if (selected) 2.dp else 1.dp, if (selected) Reef.faction(f) else Reef.line, shape)
                 .clickable(onClick = onClick)
-                .padding(vertical = 6.dp, horizontal = 4.dp),
+                .padding(vertical = 5.dp, horizontal = 3.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(2.dp),
+            verticalArrangement = Arrangement.spacedBy(1.dp),
         ) {
-            Portrait(f, 50.dp)
-            Text(plate.name, color = Reef.ink, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, maxLines = 1)
-            Text(plate.role, color = Reef.muted, fontSize = 10.sp, maxLines = 1)
+            Portrait(f, 42.dp)
+            Text(plate.name, color = Reef.ink, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, maxLines = 1)
+            Text(plate.role, color = Reef.muted, fontSize = 9.5.sp, maxLines = 1)
             Text("●".repeat(plate.complexity) + "○".repeat(4 - plate.complexity), color = Reef.faction(f), fontSize = 9.sp)
         }
         if (selected) {
@@ -249,9 +249,9 @@ private fun FactionTile(f: FactionId, seat: Int, modifier: Modifier, onInfo: () 
             ) { Text("${seat + 1}", color = Reef.night, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
         }
         Box(
-            Modifier.align(Alignment.TopEnd).offset(x = (-4).dp, y = 4.dp).size(20.dp).border(1.dp, Reef.line, CircleShape).clickable(onClick = onInfo),
+            Modifier.align(Alignment.TopEnd).offset(x = (-4).dp, y = 4.dp).size(22.dp).background(Reef.raised, CircleShape).border(1.dp, Reef.muted, CircleShape).clickable(onClick = onInfo),
             contentAlignment = Alignment.Center,
-        ) { Text("i", color = Reef.muted, fontSize = 12.sp, fontStyle = FontStyle.Italic) }
+        ) { Text("?", color = Reef.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
     }
 }
 

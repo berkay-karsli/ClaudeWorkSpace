@@ -74,6 +74,16 @@ fun VpBadge(text: String, height: Dp = 20.dp) {
     }
 }
 
+/** A round gold coin with a number, for scores. */
+@Composable
+fun VpCoin(n: Int, modifier: Modifier = Modifier) {
+    Box(
+        modifier.size(20.dp).background(Brush.verticalGradient(listOf(Color(0xFFFFE27A), Color(0xFFD49A1C))), CircleShape)
+            .border(1.dp, Color(0xFF7A5A08), CircleShape),
+        contentAlignment = Alignment.Center,
+    ) { Text("$n", color = Color(0xFF3A2A04), fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1) }
+}
+
 /** A small card back or face, colored by suit, for diagrams. */
 @Composable
 fun CardGlyph(suit: Suit?, count: String? = null, size: Dp = 26.dp) {
@@ -120,7 +130,7 @@ fun Diagram(glyphs: List<Glyph>, size: Dp = 26.dp) {
  * diagram. [ways] says how many different ways it can be taken right now.
  */
 @Composable
-fun ActionCard(f: FactionId, kind: String, ways: Int, selected: Boolean, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
+fun ActionCard(f: FactionId, kind: String, ways: Int, selected: Boolean, modifier: Modifier = Modifier, compact: Boolean = false, onClick: (() -> Unit)? = null) {
     val info = Guide.action(f, kind)
     val shape = RoundedCornerShape(12.dp)
     Column(
@@ -128,8 +138,8 @@ fun ActionCard(f: FactionId, kind: String, ways: Int, selected: Boolean, modifie
             .background(if (selected) Color(0xFF1B4652) else Reef.raised, shape)
             .border(if (selected) 2.dp else 1.dp, if (selected) Reef.current else Reef.line, shape)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(10.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+            .padding(8.dp),
+        verticalArrangement = Arrangement.spacedBy(5.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(38.dp).background(Color(0xFF0E3042), RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
@@ -137,12 +147,12 @@ fun ActionCard(f: FactionId, kind: String, ways: Int, selected: Boolean, modifie
             }
             Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
-                Text(info.title, color = Reef.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(info.title, color = Reef.ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, lineHeight = 16.sp, overflow = TextOverflow.Ellipsis)
                 if (ways > 1) Text("$ways ways", color = Reef.muted, fontSize = 11.sp)
             }
         }
         if (info.diagram.size > 1) Diagram(info.diagram)
-        if (info.blurb.isNotEmpty()) Text(info.blurb, color = Reef.muted, fontSize = 12.sp, lineHeight = 15.sp)
+        if (info.blurb.isNotEmpty()) Text(info.blurb, color = Reef.muted, fontSize = 11.5.sp, lineHeight = 14.sp, maxLines = if (compact) 3 else 8, overflow = TextOverflow.Ellipsis)
     }
 }
 

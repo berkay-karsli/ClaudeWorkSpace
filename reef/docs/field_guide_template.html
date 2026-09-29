@@ -171,7 +171,7 @@ svg .gyre-label { font-family: var(--display); font-style: italic; font-size: 17
 .glance th[scope="row"] { font-weight: 700; white-space: nowrap; }
 .glance th[scope="row"] a { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; }
 .glance th[scope="row"] a:hover span { text-decoration: underline; }
-.glance svg.mini { width: 26px; height: 26px; flex: none; }
+.glance svg.mini { width: 30px; height: 30px; flex: none; border-radius: 50%; background: radial-gradient(circle at 50% 40%, #2c6e86, #0e3042); }
 .glance .v { text-align: center; width: 4.6em; }
 .glance .by { color: var(--muted); }
 .glance.soft { min-width: 720px; }
@@ -183,9 +183,9 @@ svg .gyre-label { font-family: var(--display); font-style: italic; font-size: 17
 /* Plates */
 .plates { display: grid; }
 .plate { padding-block: 40px; border-top: 1px solid var(--line); display: grid; gap: 16px; scroll-margin-top: 16px; }
-.plate-head { display: grid; grid-template-columns: 84px minmax(0, 1fr) auto; gap: 18px; align-items: center; }
-.specimen { width: 84px; height: 84px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); display: grid; place-items: center; }
-.specimen svg { width: 60px; height: 60px; }
+.plate-head { display: grid; grid-template-columns: 116px minmax(0, 1fr) auto; gap: 18px; align-items: center; }
+.specimen { width: 116px; height: 116px; border-radius: 50%; border: 2px solid var(--fc, var(--line)); background: radial-gradient(circle at 50% 40%, #2c6e86, #0e3042); display: grid; place-items: center; overflow: hidden; }
+.specimen svg { width: 104px; height: 104px; }
 .plate-title { display: grid; gap: 4px; min-width: 0; }
 .plate-title h3 { font-size: var(--s-h3); }
 .taxon { font-size: var(--s-small); color: var(--muted); }
@@ -243,9 +243,9 @@ ol.phases li::before { content: counter(ph); font-family: var(--display); font-s
 @media (max-width: 760px) {
   .rules, .changes, .plate-body, .plate-foot, .two { grid-template-columns: minmax(0, 1fr); }
   .plate-body, .plate-foot, .two { gap: 20px; }
-  .plate-head { grid-template-columns: 64px minmax(0, 1fr); }
-  .specimen { width: 64px; height: 64px; }
-  .specimen svg { width: 46px; height: 46px; }
+  .plate-head { grid-template-columns: 84px minmax(0, 1fr); }
+  .specimen { width: 84px; height: 84px; }
+  .specimen svg { width: 76px; height: 76px; }
   .stats { grid-column: 1 / -1; justify-content: start; grid-template-columns: auto auto auto auto; }
   .stats dd { text-align: left; }
 }
@@ -270,7 +270,7 @@ ol.phases li::before { content: counter(ph); font-family: var(--display); font-s
 <div class="wrap">
 
 <header class="hero">
-  <p class="cap">Design draft 3 · softlock review · all factions in progress</p>
+  <p class="cap">Design draft 3 · softlock review · balance from bot games</p>
   <h1><em>Reef</em></h1>
   <p class="lede">An asymmetric strategy game for Android, built on Root's bones and set on a coral reef. %%COUNT%% factions fight over twelve reefs, and each one is built around a single idea.</p>
   <div class="facts">
@@ -290,6 +290,15 @@ ol.phases li::before { content: counter(ph); font-family: var(--display); font-s
     <p>Every faction checked for ways it could be wiped out or left with nothing useful to do. Each fix is written into that faction's plate below, and bot games play every lineup to catch anything missed.</p>
   </div>
   %%SOFTLOCKS%%
+</section>
+
+<section class="block" aria-labelledby="balance-h">
+  <div class="block-head">
+    <p class="cap">Draft 3</p>
+    <h2 id="balance-h">Balance from bot games</h2>
+    <p>Bots played 126 games across lineups of 2 to 4 factions. Every game finished, no player was ever left without a choice, and no piece or card was ever lost. These were the scores out of line, and the fixes, each written into its plate below.</p>
+  </div>
+  %%BALANCE%%
 </section>
 
 <section class="block" aria-labelledby="changes-h">

@@ -5,6 +5,7 @@ check() refuses to build when the design breaks one of its own consistency rules
 
     python3 build_field_guide.py [output.html]
 """
+import os
 import math
 import re
 import sys
@@ -383,6 +384,20 @@ SOFTLOCKS = [
     ("Cuttlefish", "New cuttlefish only arrived at pigments. Lose them all and nothing came back.", "With no pigment on the map, 2 arrive at any gate."),
 ]
 
+# What 126 bot games across 2-4 faction lineups showed, and what changed. (faction, found, change)
+BALANCE = [
+    ("Starfish", "Scored every Rubble reef every Dusk: 4.8 VP a round, winning 16 games of 19.", "6 Rubble tokens instead of 8, and 1 VP for every 2 Rubble reefs."),
+    ("Cuttlefish", "Scored every pattern it held each Dusk: 4.6 VP a round.", "One pattern per Dusk."),
+    ("Anglerfish", "Snapped at every lure and rim reef, 2 hits before the dice each time.", "Up to 2 snaps per Dusk, and the first bite is 1 hit."),
+    ("Hermit Crabs", "0.6 VP a round: buying a shell handed the crabs a point, so nobody bought.", "Markets score 1 VP every Dusk; a shell sold feeds the Till instead. Shells are rented until the crabs' next Dawn."),
+    ("Lionfish", "Gorging alone scored under 1 VP a round.", "At Dusk, 1 VP per reef held alone with 4 or more lionfish."),
+    ("Octopus", "Garden kinds came slowly.", "Stolen cards score 1 VP, like stolen tokens."),
+    ("Sea Turtles", "The long trip from feeding to nest paid too little.", "Laying adds 1 egg, and eggs score when laid and again when they hatch."),
+    ("Parrotfish", "Sand came too slowly for islands.", "Grazing gives 3 Sand, chewing 2."),
+    ("Sharks", "Hunted well but scored little.", "Each Blood eaten scores 2 VP."),
+    ("Sea Snake · Jellyfish · Sardines", "A little behind the rest.", "Snake reefs round up; swarms of 3 score, 6 or more score 2; schools of 7-9 score 4 and 10+ score 6."),
+]
+
 SHARED_RULES = [
     ("Twelve reefs", "Each reef has a suit (Kelp, Sponge or Pearl) and one to three slots for buildings. Channels connect neighboring reefs.", False),
     ("Edges of the map", "The four corner reefs are gates to the open ocean. The top row is the shore. The three reefs touching the Trench are the rim.", True),
@@ -504,6 +519,21 @@ GLYPHS = {
 }
 
 
+ART_SVG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "art", "svg")
+PORTRAITS = {
+    "sharks": "shark", "sardines": "sardines", "lionfish": "lionfish", "starfish": "starfish", "coral": "coral",
+    "jellyfish": "jellyfish", "parrotfish": "parrotfish", "turtles": "turtle", "snake": "snake", "remoras": "remora",
+    "crabs": "crab", "anglers": "angler", "octopus": "octopus", "cuttlefish": "cuttlefish",
+}
+
+
+def portrait(f, cls=""):
+    """The faction's portrait, the same picture the app shows (made by art/build_art.py)."""
+    with open(os.path.join(ART_SVG, PORTRAITS[f["key"]] + ".svg")) as fh:
+        svg = fh.read().strip()
+    return svg.replace("<svg ", f'<svg class="{cls}" aria-hidden="true" ', 1)
+
+
 def glyph(f, cls=""):
     style = "" if f["color"] == "court" else f' style="color:var(--f-{f["color"]})"'
     return f'<svg class="{cls}"{style} aria-hidden="true"><use href="#g-{f["glyph"]}"/></svg>'
@@ -551,7 +581,7 @@ def plate(i, f):
     return f'''
   <article class="plate" id="{f["key"]}" style="--fc:var(--f-{f["color"] if f["color"] != "court" else "court-a"})">
     <div class="plate-head">
-      <div class="specimen">{glyph(f)}</div>
+      <div class="specimen">{portrait(f)}</div>
       <div class="plate-title"><p class="cap">Plate {roman(i)} · {f["role"]}</p><h3>{f["name"]}</h3><p class="taxon"><i>{f["latin"]}</i> · {f["common"]}</p></div>
       <dl class="stats"><dt>Complexity</dt><dd>{pips(f["complexity"])}</dd><dt>Reach</dt><dd>{f["reach"]}</dd></dl>
     </div>
@@ -585,7 +615,7 @@ def glance_table():
             for v in VERBS
         )
         rows.append(
-            f'<tr><td class="num">{roman(i)}</td><th scope="row"><a href="#{f["key"]}">{glyph(f, "mini")}<span>{f["name"]}</span></a></th>'
+            f'<tr><td class="num">{roman(i)}</td><th scope="row"><a href="#{f["key"]}">{portrait(f, "mini")}<span>{f["name"]}</span></a></th>'
             f'<td class="core">{esc(f["core"])}</td>{cells}<td class="by">{esc(f["scores_by"])}</td></tr>'
         )
     return f'''<div class="table-scroll"><table class="glance">
@@ -669,6 +699,14 @@ def softlocks_html():
       <tbody>{rows}</tbody></table></div>'''
 
 
+def balance_html():
+    rows = "".join(f'<tr><th scope="row">{n}</th><td>{esc(found)}</td><td>{esc(change)}</td></tr>' for n, found, change in BALANCE)
+    return f'''<div class="table-scroll"><table class="glance soft">
+      <thead><tr><th scope="col">Faction</th><th scope="col">What bot games showed</th><th scope="col">What changed</th></tr></thead>
+      <tbody>{rows}</tbody></table></div>
+      <p class="note">After these changes every faction scores 2.0 to 2.8 VP a round against the bots, and a game usually ends around round 10 (5 to 29 in the bot games).</p>'''
+
+
 def changes_html(items):
     return "".join(f'<li><b>{t}</b><p><span class="was">Draft 1:</span> {esc(w)}</p><p><span class="now">Now:</span> {esc(n)}</p></li>' for t, w, n in items)
 
@@ -686,6 +724,7 @@ def build(path):
         "%%CHANGES_SHARED%%": changes_html(CHANGES_SHARED), "%%CHANGES_FACTIONS%%": changes_html(CHANGES_FACTIONS),
         "%%COUNT%%": str(len(FACTIONS)),
         "%%SOFTLOCKS%%": softlocks_html(),
+        "%%BALANCE%%": balance_html(),
     }.items():
         html = html.replace(k, v)
     Path(path).write_text(html, encoding="utf-8")

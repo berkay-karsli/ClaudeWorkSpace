@@ -6,6 +6,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -38,7 +40,7 @@ import com.reef.engine.Plates
 
 /** A full-screen sheet with a title bar and a Close button. */
 @Composable
-private fun Sheet(title: String, onClose: () -> Unit, content: @Composable () -> Unit) {
+private fun Sheet(title: String, onClose: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     Box(Modifier.fillMaxSize().background(Reef.night).clickable(onClick = {})) {
         Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -78,9 +80,11 @@ fun RulesDialog(factions: List<FactionId>, onClose: () -> Unit) {
             for (f in factions) Chip(f.display, primary = tab == f, faction = f) { tab = f }
             Chip("Shared rules", primary = tab == null, image = Icons.card) { tab = null }
         }
-        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            val f = tab
-            if (f == null) SharedRules() else FactionBoard(f)
+        val f = tab
+        if (f == null) {
+            Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) { SharedRules() }
+        } else {
+            FactionBoard(f, Modifier.weight(1f))
         }
     }
 }
@@ -96,78 +100,77 @@ fun SharedRules() {
 }
 
 /**
- * A faction's board: who they are, their three rules each with a picture, the shape of their
- * turn from Dawn to Dusk, and how they score. The words come from the design guide.
+ * A faction's board: who they are on the left; on the right, their three rules each with a
+ * picture, the shape of their turn from Dawn to Dusk, and how they score. The words come from
+ * the design guide.
  */
 @Composable
-fun FactionBoard(f: FactionId) {
+fun FactionBoard(f: FactionId, modifier: Modifier = Modifier) {
     val plate = Plates.of(f)
     val color = Reef.faction(f)
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(
-            Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(color.copy(alpha = 0.25f), Color.Transparent)), RoundedCornerShape(14.dp)).padding(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
+    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        Column(
+            Modifier.width(230.dp).fillMaxHeight()
+                .background(Brush.verticalGradient(listOf(color.copy(alpha = 0.22f), Color.Transparent)), RoundedCornerShape(14.dp))
+                .verticalScroll(rememberScrollState())
+                .padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Portrait(f, 92.dp, ring = 3.dp)
-            Spacer(Modifier.width(14.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(plate.name, color = Reef.ink, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
-                Text("${plate.role} · complexity " + "●".repeat(plate.complexity) + "○".repeat(4 - plate.complexity) + " · reach ${plate.reach}", color = color, fontSize = 13.sp)
-                Text("“${plate.tagline}”", color = Reef.ink, fontStyle = FontStyle.Italic, fontSize = 15.sp)
-                Text(plate.idea, color = Reef.muted, fontSize = 13.sp)
-            }
+            Portrait(f, 96.dp, ring = 3.dp)
+            Text(plate.name, color = Reef.ink, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+            Text(plate.role, color = color, fontSize = 13.sp)
+            Text("complexity " + "●".repeat(plate.complexity) + "○".repeat(4 - plate.complexity) + " · reach ${plate.reach}", color = Reef.muted, fontSize = 11.sp)
+            Text("“${plate.tagline}”", color = Reef.ink, fontStyle = FontStyle.Italic, fontSize = 14.sp)
+            Text(plate.idea, color = Reef.muted, fontSize = 12.sp, lineHeight = 15.sp)
         }
-        SectionTitle("Three rules")
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            SectionTitle("Three rules")
             for (r in plate.rules) {
-                Column(
-                    Modifier.weight(1f).background(Reef.raised, RoundedCornerShape(12.dp)).border(1.dp, Reef.line, RoundedCornerShape(12.dp)).padding(10.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(40.dp).background(Color(0xFF0E3042), RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
-                            ArtImage(Guide.ruleIcon(f, r.title), 34.dp)
-                        }
-                        Spacer(Modifier.width(8.dp))
-                        Text(r.title, color = Reef.ink, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                    }
-                    Text(stripTags(r.text), color = Reef.muted, fontSize = 12.sp, lineHeight = 15.sp)
-                }
-            }
-        }
-        SectionTitle("A turn")
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            for (t in plate.turn) {
-                val icon = when (t.phase) {
-                    "Dawn" -> Icons.dawn
-                    "Day" -> Icons.day
-                    else -> Icons.endday
-                }
                 Row(
-                    Modifier.weight(1f).background(Reef.surface, RoundedCornerShape(12.dp)).padding(8.dp),
+                    Modifier.fillMaxWidth().background(Reef.raised, RoundedCornerShape(12.dp)).border(1.dp, Reef.line, RoundedCornerShape(12.dp)).padding(8.dp),
                     verticalAlignment = Alignment.Top,
                 ) {
-                    ArtImage(icon, 30.dp)
-                    Spacer(Modifier.width(6.dp))
+                    Box(Modifier.size(44.dp).background(Color(0xFF0E3042), RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
+                        ArtImage(Guide.ruleIcon(f, r.title), 38.dp)
+                    }
+                    Spacer(Modifier.width(10.dp))
                     Column {
-                        Text(t.phase, color = Reef.current, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Text(r.title, color = Reef.ink, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                        Text(stripTags(r.text), color = Reef.muted, fontSize = 12.5.sp, lineHeight = 16.sp)
+                    }
+                }
+            }
+            SectionTitle("A turn")
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                for (t in plate.turn) {
+                    val icon = when (t.phase) {
+                        "Dawn" -> Icons.dawn
+                        "Day" -> Icons.day
+                        else -> Icons.endday
+                    }
+                    Column(
+                        Modifier.weight(1f).background(Reef.surface, RoundedCornerShape(12.dp)).padding(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(3.dp),
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            ArtImage(icon, 26.dp)
+                            Spacer(Modifier.width(6.dp))
+                            Text(t.phase, color = Reef.current, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        }
                         Text(t.text, color = Reef.muted, fontSize = 12.sp, lineHeight = 15.sp)
                     }
                 }
             }
-        }
-        SectionTitle("Scoring")
-        for (s in plate.scores) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                VpBadge("VP")
-                Spacer(Modifier.width(8.dp))
-                Text(s, color = Reef.ink, fontSize = 13.sp)
+            SectionTitle("Scoring")
+            for (s in plate.scores) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    VpBadge("VP")
+                    Spacer(Modifier.width(8.dp))
+                    Text(s, color = Reef.ink, fontSize = 13.sp)
+                }
             }
-        }
-        SectionTitle("Pieces and setup")
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Portrait(f, 30.dp, ring = 1.5.dp)
-            Spacer(Modifier.width(8.dp))
+            SectionTitle("Pieces and setup")
             Text("${plate.pieces} Setup: ${plate.setup}", color = Reef.muted, fontSize = 13.sp)
         }
     }
