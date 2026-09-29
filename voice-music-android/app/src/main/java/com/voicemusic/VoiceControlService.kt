@@ -92,7 +92,9 @@ class VoiceControlService : Service() {
                         return@onSuccess
                     }
                     model = m
-                    detector = WakeWordDetector(m, Prefs.wakePhrase(this), ::onWakePhrase)
+                    detector = WakeWordDetector(
+                        m, Prefs.wakePhrase(this), Prefs.sensitivity(this).minConfidence, ::onWakePhrase,
+                    )
                     listenForWakePhrase()
                 }.onFailure {
                     Log.e(TAG, "Could not load model", it)
@@ -106,7 +108,7 @@ class VoiceControlService : Service() {
     private fun listenForWakePhrase() {
         if (destroyed) return
         detector?.start()
-        updateStatus("Listening for \"${Prefs.wakePhrase(this)}\"")
+        updateStatus("Sleeping – say \"${Prefs.wakePhrase(this)}\" to wake me")
     }
 
     private fun onWakePhrase() {
@@ -147,6 +149,12 @@ class VoiceControlService : Service() {
 
         val command = CommandParser.parseBest(results)
         audioManager.abandonAudioFocusRequest(focusRequest)
+        if (command is Command.Play && command.query.split(' ').size > MAX_SONG_WORDS) {
+            // A long sentence is conversation after an accidental wake-up, not a song name.
+            updateStatus("Ignored: \"${command.query}\"")
+            backToWakePhrase()
+            return
+        }
         if (command is Command.Play) {
             updateStatus("Looking for ${command.query}…")
             musicController.play(command.query) { message ->
@@ -243,6 +251,7 @@ class VoiceControlService : Service() {
         private const val CHANNEL_ID = "voice_control"
         private const val NOTIFICATION_ID = 1
         private const val ACTION_STOP = "com.voicemusic.STOP"
+        private const val MAX_SONG_WORDS = 8
 
         /** Read and written on the main thread only. */
         var isRunning = false

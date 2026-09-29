@@ -6,13 +6,17 @@
     <string name="wake_phrase_hint">e.g. hey music</string>
     <string name="wake_phrase_help">Use 2–3 common English words. "Hey Google" and "Hey Siri" are reserved by Google Assistant and Siri, so pick your own phrase, like "hey music" or "okay jukebox".</string>
     <string name="save">Save</string>
+    <string name="sensitivity_title">Wake-up sensitivity</string>
+    <string name="sensitivity_low">Strict: ignores conversation best, say the phrase clearly</string>
+    <string name="sensitivity_normal">Normal</string>
+    <string name="sensitivity_high">Easy: wakes more easily, may react to conversation</string>
     <string name="start_listening">Start listening</string>
     <string name="stop_listening">Stop listening</string>
     <string name="test_title">Try a command without speaking</string>
     <string name="test_hint">e.g. Tarkan Kuzu Kuzu</string>
     <string name="run">Run</string>
     <string name="commands_title">After the beep, just say the song</string>
-    <string name="commands_help">Say the wake phrase, wait for the beep, then say the song, artist, album or playlist name, e.g. "Bohemian Rhapsody" or "Tarkan Kuzu Kuzu". The app repeats what it heard ("Playing …") and starts it in YouTube Music. If it didn\'t hear you, it asks once more.\n\nOther commands: "open YouTube Music", "next", "previous", "pause", "resume", "volume up", "volume down" (Turkish: "sonraki", "önceki", "durdur", "devam", "sesi aç", "sesi kıs").\n\nIf a song title is also a command (like "Stop"), say "play" first: "play Stop".</string>
+    <string name="commands_help">While listening, the app sleeps and ignores everything except the wake phrase. Say the wake phrase, wait for the beep, then say the song, artist, album or playlist name, e.g. "Bohemian Rhapsody" or "Tarkan Kuzu Kuzu". The app repeats what it heard ("Playing …") and starts it in YouTube Music. If it didn\'t hear you, it asks once more. After the song starts it goes back to sleep.\n\nOther commands: "open YouTube Music", "next", "previous", "pause", "resume", "volume up", "volume down" (Turkish: "sonraki", "önceki", "durdur", "devam", "sesi aç", "sesi kıs").\n\nIf a song title is also a command (like "Stop"), say "play" first: "play Stop".</string>
     <string name="channel_name">Voice control</string>
     <string name="stop">Stop</string>
 </resources>

@@ -36,6 +36,23 @@ assistants, and ordinary apps can't claim them. Instead this app has its **own**
 can change in the app (for example "hey music", "okay jukebox", "hello player"). Two or three common
 English words work best.
 
+## Sleep mode (so conversation doesn't get in)
+
+Once you tap **Start listening**, the app sleeps. While sleeping it ignores everything except
+the wake phrase, and nothing leaves the phone. After "hey music" and your song it goes straight back
+to sleep; the notification shows *"Sleeping – say "hey music" to wake me"*.
+
+To keep friends' conversation from waking it by accident:
+
+- It listens for the wake phrase among a set of everyday words, so talk that only *sounds*
+  similar doesn't count as "hey music".
+- It waits until the phrase is finished (a short pause after it), and every word must be
+  recognized confidently.
+- If it does wake by mistake and hears a long sentence (more than 8 words) instead of a song
+  name, it ignores it and goes back to sleep.
+- **Wake-up sensitivity** on the main screen: *Strict* if it still wakes up from conversation,
+  *Easy* if it's hard to wake.
+
 ## How a song is started
 
 YouTube Music ignores "play this search" requests from apps other than Google's (it only fills in

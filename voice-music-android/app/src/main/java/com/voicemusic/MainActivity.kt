@@ -12,6 +12,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ProgressBar
+import android.widget.RadioGroup
 import android.widget.TextView
 import android.widget.Toast
 
@@ -63,6 +64,19 @@ class MainActivity : Activity() {
             }
         }
         findViewById<Button>(R.id.save_wake_phrase).setOnClickListener { saveWakePhrase() }
+
+        val sensitivityButtons = mapOf(
+            Prefs.Sensitivity.LOW to R.id.sensitivity_low,
+            Prefs.Sensitivity.NORMAL to R.id.sensitivity_normal,
+            Prefs.Sensitivity.HIGH to R.id.sensitivity_high,
+        )
+        val sensitivityGroup = findViewById<RadioGroup>(R.id.sensitivity)
+        sensitivityGroup.check(sensitivityButtons.getValue(Prefs.sensitivity(this)))
+        sensitivityGroup.setOnCheckedChangeListener { _, checkedId ->
+            val chosen = sensitivityButtons.entries.firstOrNull { it.value == checkedId }?.key ?: return@setOnCheckedChangeListener
+            Prefs.setSensitivity(this, chosen)
+            restartListeningIfRunning()
+        }
 
         val testInput = findViewById<EditText>(R.id.test_command)
         val testResult = findViewById<TextView>(R.id.test_result)
@@ -142,8 +156,12 @@ class MainActivity : Activity() {
         Prefs.setWakePhrase(this, phrase)
         wakePhrase.setText(phrase)
         Toast.makeText(this, "Wake phrase saved", Toast.LENGTH_SHORT).show()
+        restartListeningIfRunning()
+    }
+
+    /** Restarts the service so the detector picks up new settings. */
+    private fun restartListeningIfRunning() {
         if (VoiceControlService.isRunning) {
-            // Restart so the detector picks up the new phrase.
             VoiceControlService.stop(this)
             status.postDelayed({ VoiceControlService.start(this) }, 500)
         }

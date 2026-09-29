@@ -100,6 +100,37 @@
             android:text="@string/wake_phrase_help"
             android:textAppearance="@android:style/TextAppearance.Material.Caption" />
 
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/sensitivity_title"
+            android:textAppearance="@android:style/TextAppearance.Material.Subhead" />
+
+        <RadioGroup
+            android:id="@+id/sensitivity"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <RadioButton
+                android:id="@+id/sensitivity_low"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/sensitivity_low" />
+
+            <RadioButton
+                android:id="@+id/sensitivity_normal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/sensitivity_normal" />
+
+            <RadioButton
+                android:id="@+id/sensitivity_high"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/sensitivity_high" />
+        </RadioGroup>
+
         <!-- Commands -->
         <TextView
             android:layout_width="match_parent"
