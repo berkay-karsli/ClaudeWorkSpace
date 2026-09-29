@@ -9,7 +9,7 @@ val SYMPATHY_VP = listOf(0, 1, 1, 1, 2, 2, 3, 4, 4, 4)
 internal suspend fun Game.allianceSetup() {
     val p = player(ALLIANCE)
     repeat(3) { drawCard()?.let { p.supporters += it } }
-    log("🌿 The Uprising gathers 3 secret supporters")
+    log("🌿 The Alliance gathers 3 secret supporters")
 }
 
 private fun Game.matchingSupporters(suit: Suit) = player(ALLIANCE).supporters.count { it.suit.matches(suit) }

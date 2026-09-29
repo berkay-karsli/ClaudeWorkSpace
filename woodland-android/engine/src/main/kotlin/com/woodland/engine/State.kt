@@ -73,12 +73,12 @@ class PlayerState(val faction: Faction, val human: Boolean) {
     /** The Vagabond's coalition partner after it plays a dominance card. */
     var coalition: Faction? = null
 
-    // Bird Dynasty
+    // Eyrie Dynasties
     var leader: Leader? = null
     val usedLeaders = mutableListOf<Leader>()
     val decree: List<MutableList<Card>> = DecreeColumn.entries.map { mutableListOf() }
 
-    // Forest Uprising
+    // Woodland Alliance
     val supporters = mutableListOf<Card>()
     var officers = 0
 

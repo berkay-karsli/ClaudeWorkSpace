@@ -32,14 +32,14 @@ class MainActivity : Activity() {
             setPadding(dp(20), dp(28), dp(20), dp(20))
         }
         root.addView(TextView(this).apply {
-            text = "🌲 Woodland Warfare"
+            text = "🌲 Root"
             textSize = 30f
             setTypeface(typeface, Typeface.BOLD)
             setTextColor(Palette.PARCHMENT)
             gravity = Gravity.CENTER
         })
         root.addView(TextView(this).apply {
-            text = "An asymmetric war for the forest"
+            text = "A Game of Woodland Might and Right"
             textSize = 15f
             setTextColor(0xFFB8C9A8.toInt())
             gravity = Gravity.CENTER

@@ -1,4 +1,4 @@
-name: Woodland Warfare Android
+name: Root Android
 
 on:
   push:
@@ -26,20 +26,20 @@ jobs:
       - name: Test rules engine and build APK
         run: |
           ./gradlew :engine:test assembleDebug
-          cp app/build/outputs/apk/debug/app-debug.apk WoodlandWarfare.apk
+          cp app/build/outputs/apk/debug/app-debug.apk Root.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: WoodlandWarfare-apk
-          path: woodland-android/WoodlandWarfare.apk
+          name: Root.apk
+          path: woodland-android/Root.apk
       # A plain .apk download link that works on a phone without logging in.
       - name: Publish to the "woodland-latest" release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: woodland-latest
           target_commitish: ${{ github.sha }}
-          name: Woodland Warfare (latest build)
+          name: Root fan edition (latest build)
           body: |
-            Latest build of Woodland Warfare from `${{ github.ref_name }}` (${{ github.sha }}).
-            On your phone, tap **WoodlandWarfare.apk** below to download and install it.
-          files: woodland-android/WoodlandWarfare.apk
+            Latest build of the Root fan edition from `${{ github.ref_name }}` (${{ github.sha }}).
+            On your phone, tap **Root.apk** below to download and install it.
+          files: woodland-android/Root.apk
           make_latest: false

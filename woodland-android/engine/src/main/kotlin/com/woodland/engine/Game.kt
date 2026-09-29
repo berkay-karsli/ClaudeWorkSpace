@@ -208,7 +208,7 @@ class Game(val config: GameConfig, val seed: Long) {
             } else if (p == best && p > 0) tie = true
         }
         if (who == null || !tie) return who
-        // Lords of the Forest: the Bird Dynasty rules ties it is part of.
+        // Lords of the Forest: the Eyrie Dynasties rules ties it is part of.
         return if (has(Faction.BIRDS) && cs.rulePower(Faction.BIRDS) == best) Faction.BIRDS else null
     }
 
@@ -224,7 +224,7 @@ class Game(val config: GameConfig, val seed: Long) {
     fun keepClearing(): Int? = board.firstOrNull { it.keep }?.id
     fun baseSuits(): List<Suit> = board.filter { BuildingType.BASE in it.buildings }.map { it.suit }
 
-    /** Only the Cat Dominion may place pieces in the keep's clearing. */
+    /** Only the Marquise de Cat may place pieces in the keep's clearing. */
     fun canPlace(f: Faction, c: Int) = f == Faction.CATS || !board[c].keep
 
     fun hasPiece(f: Faction, c: Int) =
@@ -299,10 +299,10 @@ class Game(val config: GameConfig, val seed: Long) {
         val p = player(f)
         val others = order.filter { it != f }
         if (p.hasEffect(CardKind.BETTER_BURROW_BANK)) {
-            choose(f, "Burrow Bank: who draws a card with you?", others.map { o ->
+            choose(f, "Better Burrow Bank: who draws a card with you?", others.map { o ->
                 Choice("${o.icon} ${o.label}", ai = -player(o).vp.toDouble()) {
                     draw(f, 1); draw(o, 1)
-                    log("${f.icon} and ${o.icon} each draw a card (Burrow Bank)")
+                    log("${f.icon} and ${o.icon} each draw a card (Better Burrow Bank)")
                 }
             })
         }
@@ -599,13 +599,13 @@ class Game(val config: GameConfig, val seed: Long) {
         if (matching.isEmpty()) {
             val card = drawCard()
             if (card != null) addSupporter(card)
-            log("😠 Outrage! ${by.icon} has no ${suit.label} card, so the Uprising draws a supporter")
+            log("😠 Outrage! ${by.icon} has no ${suit.label} card, so the Alliance draws a supporter")
         } else {
-            val i = ask(by, "Outrage in ${name(c)}! Give a ${suit.label} card to the Uprising",
+            val i = ask(by, "Outrage in ${name(c)}! Give a ${suit.label} card to the Alliance",
                 matching.map { Option("Give ${it.title}", c, ai = -cardValue(it)) })
             p.hand.remove(matching[i])
             addSupporter(matching[i])
-            log("😠 Outrage! ${by.icon} gives a card to the Uprising's supporters")
+            log("😠 Outrage! ${by.icon} gives a card to the Alliance's supporters")
         }
     }
 
@@ -737,7 +737,7 @@ class Game(val config: GameConfig, val seed: Long) {
         val d2 = rng.nextInt(4)
         val high = max(d1, d2)
         val low = min(d1, d2)
-        // Guerrilla war: the Uprising takes the higher roll when defending.
+        // Guerrilla war: the Alliance takes the higher roll when defending.
         val attRoll = if (def == Faction.ALLIANCE) low else high
         val defRoll = if (def == Faction.ALLIANCE) high else low
         var attHits = min(attRoll, fighters(att, c))

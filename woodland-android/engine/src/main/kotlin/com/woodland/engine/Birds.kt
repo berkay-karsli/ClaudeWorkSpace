@@ -18,7 +18,7 @@ internal suspend fun Game.birdsSetup() {
     }
     board[corner].buildings += BuildingType.ROOST
     board[corner].warriors[BIRDS.ordinal] += 6
-    log("🦅 The Dynasty roosts in ${name(corner)}")
+    log("🦅 The Eyrie roosts in ${name(corner)}")
     chooseLeader()
 }
 
@@ -110,7 +110,7 @@ internal suspend fun Game.birdsTurn() {
         if (spots.isNotEmpty()) {
             val fewest = spots.minOf { cs -> order.sumOf { cs.rulePower(it) + cs.tokens(it) } }
             val candidates = spots.filter { cs -> order.sumOf { cs.rulePower(it) + cs.tokens(it) } == fewest }
-            choose(BIRDS, "A new roost: choose where the Dynasty returns", candidates.map { cs ->
+            choose(BIRDS, "A new roost: choose where the Eyrie returns", candidates.map { cs ->
                 Choice("New roost in ${name(cs.id)}", cs.id, ai = 0.0) {
                     cs.buildings += BuildingType.ROOST
                     cs.warriors[BIRDS.ordinal] += minOf(3, warriorSupply(BIRDS))

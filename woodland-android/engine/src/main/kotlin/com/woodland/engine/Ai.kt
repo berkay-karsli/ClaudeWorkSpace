@@ -16,7 +16,7 @@ object Ai {
         d.options.indices.maxBy { d.options[it].ai + rng.nextDouble() * 1.5 }
 
     /**
-     * Plays the rest of the Dynasty's turn for each option (with fresh dice) and prefers the ones
+     * Plays the rest of the Eyrie's turn for each option (with fresh dice) and prefers the ones
      * that carry out the whole Decree and grow the roosts.
      */
     private fun lookahead(game: Game, d: Decision, rng: Random): Int {

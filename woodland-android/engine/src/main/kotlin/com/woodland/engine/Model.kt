@@ -12,9 +12,9 @@ enum class Suit(val symbol: String, val label: String) {
 }
 
 enum class Faction(val label: String, val icon: String, val maxWarriors: Int) {
-    CATS("Cat Dominion", "🐱", 25),
-    BIRDS("Bird Dynasty", "🦅", 20),
-    ALLIANCE("Forest Uprising", "🌿", 10),
+    CATS("Marquise de Cat", "🐱", 25),
+    BIRDS("Eyrie Dynasties", "🦅", 20),
+    ALLIANCE("Woodland Alliance", "🌿", 10),
     VAGABOND("Vagabond", "🦝", 0);
 }
 
@@ -62,7 +62,7 @@ enum class CardKind(val label: String, val persistent: Boolean = false) {
     TAX_COLLECTOR("Tax Collector", true),
     COMMAND_WARREN("Command Warren", true),
     COBBLER("Cobbler", true),
-    BETTER_BURROW_BANK("Burrow Bank", true),
+    BETTER_BURROW_BANK("Better Burrow Bank", true),
     VIZIER("Loyal Vizier");
 }
 
@@ -114,7 +114,7 @@ object Deck {
         }
         fun special(suit: Suit, kind: CardKind, vararg cost: Suit) {
             val name = when (kind) {
-                CardKind.FAVOR -> "Favor of the ${suit.label}s"
+                CardKind.FAVOR -> "Favor of the " + when (suit) { F -> "Foxes"; R -> "Rabbits"; else -> "Mice" }
                 CardKind.DOMINANCE -> "${suit.label} Dominance"
                 else -> kind.label
             }
@@ -124,12 +124,12 @@ object Deck {
         // Fox
         special(F, CardKind.AMBUSH)
         special(F, CardKind.FAVOR, F, F, F)
+        item(F, ItemType.SWORD, 2, F, F, name = "Foxfolk Steel")
         item(F, ItemType.SWORD, 2, F, F)
-        item(F, ItemType.SWORD, 2, F, F, name = "Fine Blade")
         item(F, ItemType.HAMMER, 2, F, name = "Anvil")
         item(F, ItemType.BOOTS, 1, F, name = "Travel Gear")
-        item(F, ItemType.TEA, 2, F, name = "Tea Leaves")
-        item(F, ItemType.COINS, 3, M, M, M, name = "Gold Coins")
+        item(F, ItemType.TEA, 2, F, name = "Root Tea")
+        item(F, ItemType.COINS, 3, M, M, M, name = "Protection Racket")
         special(F, CardKind.STAND_AND_DELIVER, M, M, M)
         special(F, CardKind.TAX_COLLECTOR, R, F, M)
         special(F, CardKind.ARMORERS, F)
@@ -137,11 +137,11 @@ object Deck {
         // Rabbit
         special(R, CardKind.AMBUSH)
         special(R, CardKind.FAVOR, R, R, R)
-        item(R, ItemType.BOOTS, 1, R, R)
-        item(R, ItemType.BAG, 1, M, name = "Satchel")
-        item(R, ItemType.TEA, 2, R, name = "Tea Leaves")
-        item(R, ItemType.COINS, 3, R, R, name = "Gold Coins")
-        item(R, ItemType.BAG, 1, R, name = "Knapsack")
+        item(R, ItemType.BOOTS, 1, R, R, name = "A Visit to Friends")
+        item(R, ItemType.BAG, 1, M, name = "Smuggler's Trail")
+        item(R, ItemType.TEA, 2, R, name = "Root Tea")
+        item(R, ItemType.COINS, 3, R, R, name = "Bake Sale")
+        item(R, ItemType.BAG, 1, R, name = "Gently Used Knapsack")
         special(R, CardKind.BETTER_BURROW_BANK, R, R)
         special(R, CardKind.COMMAND_WARREN, R, R)
         special(R, CardKind.COBBLER, R, R)
@@ -153,9 +153,9 @@ object Deck {
         item(M, ItemType.CROSSBOW, 1, F)
         item(M, ItemType.SWORD, 2, M, M)
         item(M, ItemType.HAMMER, 2, M)
-        item(M, ItemType.BAG, 1, M, name = "Satchel")
+        item(M, ItemType.BAG, 1, M, name = "Mouse-in-a-Sack")
         item(M, ItemType.BOOTS, 1, M, name = "Travel Gear")
-        item(M, ItemType.TEA, 2, M, name = "Tea Leaves")
+        item(M, ItemType.TEA, 2, M, name = "Root Tea")
         item(M, ItemType.COINS, 3, M, M, M, name = "Gold Coins")
         special(M, CardKind.SCOUTING_PARTY, M, M)
         special(M, CardKind.SAPPERS, M)
@@ -169,9 +169,9 @@ object Deck {
         special(B, CardKind.COMMAND_WARREN, R, R)
         special(B, CardKind.ROYAL_CLAIM, F, R, M)
         item(B, ItemType.CROSSBOW, 1, F)
-        item(B, ItemType.SWORD, 2, F, F)
+        item(B, ItemType.SWORD, 2, F, F, name = "Arms Trader")
         item(B, ItemType.BOOTS, 1, R, name = "Woodland Runners")
-        item(B, ItemType.BAG, 1, M, name = "Bindle")
+        item(B, ItemType.BAG, 1, M, name = "Birdy Bindle")
         item(B, ItemType.COINS, 3, R, M, F, name = "Investments")
         item(B, ItemType.HAMMER, 2, F)
         return cards
