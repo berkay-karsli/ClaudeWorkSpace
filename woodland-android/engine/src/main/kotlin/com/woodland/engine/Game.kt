@@ -10,8 +10,9 @@ import kotlin.math.min
 import kotlin.random.Random
 
 /**
- * One choice offered to a player. [clearing] is the clearing it acts on (tappable on the board),
- * [from] the origin of a move. [ai] is a heuristic score the computer players maximise.
+ * One choice offered to a player. [clearing] is the clearing it acts on (tappable on the board;
+ * forests are FOREST_BASE + forest id), [from] the origin of a move. [ai] is a heuristic score the
+ * computer players maximise.
  */
 class Option(val label: String, val clearing: Int = -1, val from: Int = -1, val ai: Double = 0.0)
 
@@ -36,10 +37,12 @@ internal class GameOver : RuntimeException()
 class Game(val config: GameConfig, val seed: Long) {
     companion object {
         const val WIN_VP = 30
+        const val DOMINANCE_VP = 10
         const val HAND_LIMIT = 5
         const val MAX_WOOD = 8
         const val MAX_SYMPATHY = 10
         const val MAX_ROUNDS = 60
+        const val FOREST_BASE = 100
 
         /**
          * Rebuilds a game from its answers. With [reseed], dice rolled after the second-to-last
@@ -63,8 +66,19 @@ class Game(val config: GameConfig, val seed: Long) {
     val order: List<Faction> = Faction.entries.filter { it in players }
     internal val deck = mutableListOf<Card>()
     val discardPile = mutableListOf<Card>()
+    /** Discarded dominance cards, which anyone can take for a matching card. */
+    val availableDominance = mutableListOf<Card>()
+    val itemSupply = ItemType.SUPPLY.toMutableMap()
+    val quests = mutableListOf<Quest>()
+    internal val questDeck = mutableListOf<Quest>()
     val log = mutableListOf<String>()
     val answers = mutableListOf<Int>()
+
+    /** Where the Vagabond stands: a clearing, or a forest (then [vbClearing] is -1). */
+    var vbClearing = -1
+        internal set
+    var vbForest = -1
+        internal set
 
     var pending: Decision? = null
         private set
@@ -73,6 +87,9 @@ class Game(val config: GameConfig, val seed: Long) {
     var finished = false
         private set
     var winner: Faction? = null
+        internal set
+    /** A Vagabond in coalition with the winner wins alongside it. */
+    var coWinner: Faction? = null
         internal set
     var round = 1
         private set
@@ -132,29 +149,38 @@ class Game(val config: GameConfig, val seed: Long) {
     internal fun score(f: Faction, n: Int, why: String) {
         if (n == 0) return
         val p = player(f)
+        if (p.dominance != null) return
         p.vp = max(0, p.vp + n)
         log("${f.icon} ${if (n > 0) "+$n" else "$n"} VP ($why) → ${p.vp}")
-        if (p.vp >= WIN_VP) {
-            winner = f
-            log("🏆 ${f.label} wins with ${p.vp} VP!")
-            throw GameOver()
-        }
+        if (p.vp >= WIN_VP) win(f, "with ${p.vp} VP")
+    }
+
+    internal fun win(f: Faction, how: String) {
+        winner = f
+        coWinner = order.firstOrNull { player(it).coalition == f }
+        log("🏆 ${f.label} wins $how!" + (coWinner?.let { " The ${it.label} shares the victory." } ?: ""))
+        throw GameOver()
     }
 
     private suspend fun runGame() {
         deck.addAll(Deck.build().shuffled(rng))
+        val ruinItems = listOf(ItemType.BAG, ItemType.BOOTS, ItemType.HAMMER, ItemType.SWORD).shuffled(rng)
+        board.filter { it.def.ruin }.forEachIndexed { i, cs -> cs.ruin += ruinItems[i] }
         for (f in order) draw(f, 3)
         if (has(Faction.CATS)) catsSetup()
         if (has(Faction.BIRDS)) birdsSetup()
         if (has(Faction.ALLIANCE)) allianceSetup()
+        if (has(Faction.VAGABOND)) vagabondSetup()
         while (true) {
             for (f in order) {
                 current = f
                 log("— Round $round: ${f.icon} ${f.label} —")
+                checkDominance(f)
                 when (f) {
                     Faction.CATS -> catsTurn()
                     Faction.BIRDS -> birdsTurn()
                     Faction.ALLIANCE -> allianceTurn()
+                    Faction.VAGABOND -> vagabondTurn()
                 }
             }
             round++
@@ -201,7 +227,15 @@ class Game(val config: GameConfig, val seed: Long) {
     /** Only the Cat Dominion may place pieces in the keep's clearing. */
     fun canPlace(f: Faction, c: Int) = f == Faction.CATS || !board[c].keep
 
-    fun enemiesIn(f: Faction, c: Int) = order.filter { it != f && board[c].hasAnyPiece(it) }
+    fun hasPiece(f: Faction, c: Int) =
+        if (f == Faction.VAGABOND) vbClearing == c else board[c].hasAnyPiece(f)
+
+    fun enemiesIn(f: Faction, c: Int) = order.filter { it != f && hasPiece(it, c) }
+
+    /** Pieces that deal hits in battle: warriors, or the Vagabond's undamaged swords. */
+    fun fighters(f: Faction, c: Int) =
+        if (f == Faction.VAGABOND) (if (vbClearing == c) player(f).undamaged(ItemType.SWORD) else 0)
+        else board[c].warriors(f)
 
     fun canMove(f: Faction, from: Int, to: Int) =
         board[from].warriors(f) > 0 && (rules(f, from) || rules(f, to))
@@ -212,7 +246,8 @@ class Game(val config: GameConfig, val seed: Long) {
     }
 
     fun battleTargets(f: Faction): List<Pair<Int, Faction>> = board.flatMap { cs ->
-        if (cs.warriors(f) == 0) emptyList() else enemiesIn(f, cs.id).map { cs.id to it }
+        if (fighters(f, cs.id) == 0 && !(f == Faction.VAGABOND && vbClearing == cs.id)) emptyList()
+        else enemiesIn(f, cs.id).map { cs.id to it }
     }
 
     // ---------------------------------------------------------------- Cards
@@ -232,13 +267,18 @@ class Game(val config: GameConfig, val seed: Long) {
     }
 
     internal fun discard(card: Card) {
-        if (card.kind != CardKind.VIZIER) discardPile += card
+        when (card.kind) {
+            CardKind.VIZIER -> {}
+            CardKind.DOMINANCE -> availableDominance += card
+            else -> discardPile += card
+        }
     }
 
     internal fun cardValue(card: Card): Double = when (card.kind) {
         CardKind.AMBUSH -> 5.0
         CardKind.ITEM -> 1.0 + card.vp
         CardKind.FAVOR -> 3.0
+        CardKind.DOMINANCE -> 0.5
         else -> 2.5
     } + if (card.suit == Suit.BIRD) 1.0 else 0.0
 
@@ -252,49 +292,187 @@ class Game(val config: GameConfig, val seed: Long) {
         }
     }
 
-    internal suspend fun royalClaim(f: Faction) {
+    // ---------------------------------------------------------------- Shared card abilities
+
+    /** Start of Birdsong: Better Burrow Bank, Stand and Deliver, Royal Claim. */
+    internal suspend fun generalBirdsong(f: Faction) {
         val p = player(f)
-        val card = p.effects.firstOrNull { it.kind == CardKind.ROYAL_CLAIM } ?: return
-        val n = board.count { rules(f, it.id) }
-        choose(f, "Royal Claim", listOf(
-            Choice("Discard Royal Claim to score $n VP", ai = n - 2.5) {
-                p.effects.remove(card); discard(card); score(f, n, "Royal Claim")
-            },
-            Choice("Keep it for later", ai = 0.0) {},
-        ))
+        val others = order.filter { it != f }
+        if (p.hasEffect(CardKind.BETTER_BURROW_BANK)) {
+            choose(f, "Burrow Bank: who draws a card with you?", others.map { o ->
+                Choice("${o.icon} ${o.label}", ai = -player(o).vp.toDouble()) {
+                    draw(f, 1); draw(o, 1)
+                    log("${f.icon} and ${o.icon} each draw a card (Burrow Bank)")
+                }
+            })
+        }
+        if (p.hasEffect(CardKind.STAND_AND_DELIVER)) {
+            val targets = others.filter { player(it).hand.isNotEmpty() }
+            if (targets.isNotEmpty()) {
+                choose(f, "Stand and Deliver: take a random card?", targets.map { o ->
+                    Choice("Take from ${o.icon} ${o.label} (they score 1 VP)", ai = player(o).hand.size - 2.0 - player(o).vp / 10.0) {
+                        val card = player(o).hand.random(rng)
+                        player(o).hand.remove(card)
+                        p.hand += card
+                        log("${f.icon} takes a card from ${o.icon} (Stand and Deliver)")
+                        score(o, 1, "Stand and Deliver")
+                    }
+                } + Choice("Not this turn", ai = 0.0) {})
+            }
+        }
+        val claim = p.effects.firstOrNull { it.kind == CardKind.ROYAL_CLAIM }
+        if (claim != null) {
+            val n = board.count { rules(f, it.id) }
+            choose(f, "Royal Claim", listOf(
+                Choice("Discard Royal Claim to score $n VP", ai = n - 2.5) {
+                    p.effects.remove(claim); discard(claim); score(f, n, "Royal Claim")
+                },
+                Choice("Keep it for later", ai = 0.0) {},
+            ))
+        }
+    }
+
+    /** Start of Daylight: Command Warren, Tax Collector, and dominance cards. */
+    internal suspend fun generalDaylight(f: Faction) {
+        val p = player(f)
+        if (p.hasEffect(CardKind.COMMAND_WARREN)) {
+            val targets = battleTargets(f)
+            if (targets.isNotEmpty()) {
+                choose(f, "Command Warren: start a battle?", targets.map { (c, e) ->
+                    Choice("Battle ${e.icon} in ${name(c)}", c, ai = aiBattleScore(f, e, c)) { battle(f, e, c) }
+                } + Choice("No battle", ai = 0.0) {})
+            }
+        }
+        var taxed = false
+        var done = false
+        while (!done) {
+            val choices = mutableListOf<Choice>()
+            if (!taxed && p.hasEffect(CardKind.TAX_COLLECTOR)) {
+                for (cs in board.filter { it.warriors(f) > 0 }) {
+                    choices += Choice("Tax Collector: remove a warrior in ${name(cs.id)} to draw", cs.id,
+                        ai = if (cs.warriors(f) > 2 && enemiesIn(f, cs.id).isEmpty()) 2.0 else -2.0) {
+                        taxed = true
+                        cs.warriors[f.ordinal]--
+                        draw(f, 1)
+                        log("${f.icon} collects taxes in ${name(cs.id)}")
+                    }
+                }
+            }
+            if (p.dominance == null && p.vp >= DOMINANCE_VP) {
+                for (card in p.hand.filter { it.kind == CardKind.DOMINANCE }) {
+                    choices += Choice(if (f == Faction.VAGABOND) "Play ${card.title} to form a coalition" else "Play ${card.title}: stop scoring, win by dominance",
+                        ai = aiDominance(f, card)) { activateDominance(f, card) }
+                }
+            }
+            for (dom in availableDominance.toList()) {
+                for (card in p.hand.filter { it.kind != CardKind.DOMINANCE && it.suit == dom.suit }.distinctBy { it.id }.take(1)) {
+                    choices += Choice("Take ${dom.title} by spending ${card.title}", ai = -3.0) {
+                        p.hand.remove(card); discard(card)
+                        availableDominance.remove(dom); p.hand += dom
+                        log("${f.icon} takes ${dom.title}")
+                    }
+                }
+            }
+            if (choices.isEmpty()) return
+            choices += Choice("Continue to Daylight", ai = 0.0) { done = true }
+            choose(f, "Start of Daylight", choices)
+        }
+    }
+
+    /** Start of Evening: Cobbler. */
+    internal suspend fun generalEvening(f: Faction) {
+        if (!player(f).hasEffect(CardKind.COBBLER) || f == Faction.VAGABOND) return
+        if (legalMoves(f).isEmpty()) return
+        doMove(f, "Cobbler: take a move?", allowSkip = true)
+    }
+
+    private fun aiDominance(f: Faction, card: Card): Double {
+        val p = player(f)
+        if (f == Faction.VAGABOND) {
+            val partner = order.filter { it != f }.minBy { player(it).vp }
+            return if (player(partner).vp > p.vp) 3.0 else -5.0
+        }
+        if (p.vp > 22) return -5.0
+        val ruled = if (card.suit == Suit.BIRD) {
+            listOf(0 to 11, 2 to 9).maxOf { (a, b) -> (if (rules(f, a)) 1 else 0) + (if (rules(f, b)) 1 else 0) } + 1
+        } else board.count { it.suit == card.suit && rules(f, it.id) }
+        return if (ruled >= 2) 4.0 + ruled else -5.0
+    }
+
+    private suspend fun activateDominance(f: Faction, card: Card) {
+        val p = player(f)
+        p.hand.remove(card)
+        p.dominance = card
+        if (f == Faction.VAGABOND) {
+            val low = order.filter { it != f }.let { o -> o.filter { player(it).vp == o.minOf { x -> player(x).vp } } }
+            choose(f, "Form a coalition with…", low.map { o ->
+                Choice("${o.icon} ${o.label}", ai = 0.0) {
+                    p.coalition = o
+                    log("🦝 The Vagabond forms a coalition with ${o.icon} ${o.label}")
+                }
+            })
+        } else {
+            log("${f.icon} plays ${card.title} and stops scoring VP")
+        }
+    }
+
+    private fun checkDominance(f: Faction) {
+        val card = player(f).dominance ?: return
+        if (f == Faction.VAGABOND) return
+        val won = if (card.suit == Suit.BIRD) {
+            listOf(0 to 11, 2 to 9).any { (a, b) -> rules(f, a) && rules(f, b) }
+        } else board.count { it.suit == card.suit && rules(f, it.id) } >= 3
+        if (won) win(f, "by ${card.suit.label} dominance")
     }
 
     // ---------------------------------------------------------------- Crafting
 
-    /** Crafting pieces per clearing suit: workshops, roosts or sympathy. */
+    /** Crafting pieces per clearing suit: workshops, roosts, sympathy, or the Vagabond's hammers. */
     fun craftingPieces(f: Faction): IntArray {
         val out = IntArray(3)
+        if (f == Faction.VAGABOND) {
+            if (vbClearing >= 0) out[board[vbClearing].suit.ordinal] = player(f).ready(ItemType.HAMMER)
+            return out
+        }
         for (cs in board) {
             val n = when (f) {
                 Faction.CATS -> cs.buildings.count { it == BuildingType.WORKSHOP }
                 Faction.BIRDS -> cs.buildings.count { it == BuildingType.ROOST }
                 Faction.ALLIANCE -> if (cs.sympathy) 1 else 0
+                Faction.VAGABOND -> 0
             }
             out[cs.suit.ordinal] += n
         }
         return out
     }
 
-    private fun canCraft(f: Faction, card: Card, avail: IntArray): Boolean {
-        if (card.kind == CardKind.AMBUSH || card.kind == CardKind.VIZIER) return false
+    internal fun canCraft(f: Faction, card: Card, avail: IntArray): Boolean {
+        if (card.kind == CardKind.AMBUSH || card.kind == CardKind.VIZIER || card.kind == CardKind.DOMINANCE) return false
         if (card.kind.persistent && player(f).hasEffect(card.kind)) return false
+        if (card.item != null && (itemSupply[card.item] ?: 0) <= 0) return false
         return Suit.CLEARING_SUITS.all { s -> card.cost.count { it == s } <= avail[s.ordinal] }
     }
 
     private fun itemVp(f: Faction, card: Card) =
         if (f == Faction.BIRDS && player(f).leader != Leader.BUILDER) 1 else card.vp
 
-    private fun craftAi(f: Faction, card: Card): Double = when (card.kind) {
+    internal fun craftAi(f: Faction, card: Card): Double = when (card.kind) {
         CardKind.ITEM -> 2.0 + 3.0 * itemVp(f, card)
         CardKind.FAVOR -> board.filter { it.suit == card.suit }.sumOf { cs ->
             enemiesIn(f, cs.id).sumOf { cs.warriors(it) + 3 * (cs.buildings(it) + cs.tokens(it)) }
         } - 4.0
         else -> 3.0
+    }
+
+    internal fun craftChoices(f: Faction, avail: IntArray, onPay: (Card) -> Unit): List<Choice> {
+        val p = player(f)
+        return p.hand.filter { canCraft(f, it, avail) }.map { card ->
+            Choice("Craft ${card.title} (${card.costText}): ${card.effectText}", ai = craftAi(f, card)) {
+                onPay(card)
+                p.hand.remove(card)
+                resolveCraft(f, card)
+            }
+        }
     }
 
     internal suspend fun craftPhase(f: Faction) {
@@ -303,17 +481,9 @@ class Game(val config: GameConfig, val seed: Long) {
         while (!done) {
             val pieces = craftingPieces(f)
             val avail = IntArray(3) { pieces[it] - used[it] }
-            val p = player(f)
-            val craftable = p.hand.filter { canCraft(f, it, avail) }
-            if (craftable.isEmpty()) return
-            val choices = craftable.map { card ->
-                Choice("Craft ${card.title} (${card.costText}): ${card.effectText}", ai = craftAi(f, card)) {
-                    card.cost.forEach { used[it.ordinal]++ }
-                    p.hand.remove(card)
-                    resolveCraft(f, card)
-                }
-            } + Choice("Done crafting", ai = 0.5) { done = true }
-            choose(f, "Craft with your ${craftPieceName(f)}", choices)
+            val choices = craftChoices(f, avail) { card -> card.cost.forEach { used[it.ordinal]++ } }
+            if (choices.isEmpty()) return
+            choose(f, "Craft with your ${craftPieceName(f)}", choices + Choice("Done crafting", ai = 0.5) { done = true })
         }
     }
 
@@ -321,6 +491,7 @@ class Game(val config: GameConfig, val seed: Long) {
         Faction.CATS -> "workshops"
         Faction.BIRDS -> "roosts"
         Faction.ALLIANCE -> "sympathy"
+        Faction.VAGABOND -> "hammers"
     }
 
     private suspend fun resolveCraft(f: Faction, card: Card) {
@@ -328,6 +499,9 @@ class Game(val config: GameConfig, val seed: Long) {
         when {
             card.kind == CardKind.ITEM -> {
                 discard(card)
+                val item = card.item!!
+                itemSupply[item] = itemSupply.getValue(item) - 1
+                if (f == Faction.VAGABOND) player(f).items += Item(item) else player(f).craftedItems += item
                 score(f, itemVp(f, card), "crafted ${card.name}")
             }
             card.kind == CardKind.FAVOR -> {
@@ -338,7 +512,7 @@ class Game(val config: GameConfig, val seed: Long) {
         }
     }
 
-    /** Removes every enemy piece in a clearing (favors and revolts). */
+    /** Removes every enemy piece in a clearing (favors and revolts). The Vagabond can't be removed. */
     internal suspend fun wipeEnemies(by: Faction, c: Int) {
         val cs = board[c]
         for (enemy in order.filter { it != by }) {
@@ -354,22 +528,32 @@ class Game(val config: GameConfig, val seed: Long) {
 
     // ---------------------------------------------------------------- Removal
 
-    internal suspend fun removeWarriors(c: Int, victim: Faction, n: Int, by: Faction?) {
+    internal suspend fun removeWarriors(c: Int, victim: Faction, n: Int, by: Faction?, battle: Boolean = false) {
         val k = min(n, board[c].warriors(victim))
         if (k <= 0) return
         board[c].warriors[victim.ordinal] -= k
         log("${victim.icon} loses $k warrior${if (k > 1) "s" else ""} in ${name(c)}")
+        if (by == Faction.VAGABOND) {
+            val vb = player(Faction.VAGABOND)
+            if (vb.relations[victim] == Relation.HOSTILE) {
+                if (battle) score(Faction.VAGABOND, k, "infamy")
+            } else {
+                vb.relations[victim] = Relation.HOSTILE
+                log("🦝 ${victim.label} is now hostile to the Vagabond")
+            }
+        }
         if (victim == Faction.CATS) fieldHospitals(c, k)
     }
 
-    private fun removalVp(by: Faction, battle: Boolean) =
-        1 + if (battle && by == Faction.BIRDS && player(by).leader == Leader.DESPOT) 1 else 0
+    private fun removalVp(by: Faction, owner: Faction, battle: Boolean) = 1 +
+        (if (battle && by == Faction.BIRDS && player(by).leader == Leader.DESPOT) 1 else 0) +
+        (if (battle && by == Faction.VAGABOND && player(by).relations[owner] == Relation.HOSTILE) 1 else 0)
 
     internal suspend fun removeBuilding(c: Int, type: BuildingType, by: Faction?, battle: Boolean) {
         if (!board[c].buildings.remove(type)) return
         log("${type.owner.icon} loses a ${type.label} in ${name(c)}")
         if (type == BuildingType.BASE) baseRemoved(board[c].suit)
-        if (by != null && by != type.owner) score(by, removalVp(by, battle), "destroyed a ${type.label}")
+        if (by != null && by != type.owner) score(by, removalVp(by, type.owner, battle), "destroyed a ${type.label}")
     }
 
     internal suspend fun removeToken(c: Int, type: TokenType, by: Faction?, battle: Boolean) {
@@ -382,7 +566,7 @@ class Game(val config: GameConfig, val seed: Long) {
         log("${type.owner.icon} loses ${type.label} in ${name(c)}")
         if (by != null && by != type.owner) {
             if (type == TokenType.SYMPATHY) outrage(by, c)
-            score(by, removalVp(by, battle), "removed ${type.label}")
+            score(by, removalVp(by, type.owner, battle), "removed ${type.label}")
         }
     }
 
@@ -407,7 +591,7 @@ class Game(val config: GameConfig, val seed: Long) {
         if (baseSuits().isEmpty() && a.supporters.size >= 5) discard(card) else a.supporters += card
     }
 
-    private suspend fun outrage(by: Faction, c: Int) {
+    internal suspend fun outrage(by: Faction, c: Int) {
         if (!has(Faction.ALLIANCE) || by == Faction.ALLIANCE) return
         val suit = board[c].suit
         val p = player(by)
@@ -490,12 +674,14 @@ class Game(val config: GameConfig, val seed: Long) {
 
     internal fun aiBattleScore(att: Faction, def: Faction, c: Int): Double {
         val cs = board[c]
-        val a = cs.warriors(att)
-        val d = cs.warriors(def)
+        val a = fighters(att, c)
+        val d = fighters(def, c)
         val loot = cs.buildings(def) + cs.tokens(def)
         var s = 2.0 * min(a, 3) - 1.5 * d + 3.0 * loot - 2.0
         if (d == 0 && loot > 0) s += 4.0
         if (def == Faction.ALLIANCE && d > 0) s -= 2.0
+        if (def == Faction.VAGABOND) s += player(def).items.count { !it.damaged } * 0.3 - 1.0
+        if (att == Faction.VAGABOND && player(att).relations[def] != Relation.HOSTILE && cs.warriors(def) > 0) s -= 3.0
         return s
     }
 
@@ -538,7 +724,7 @@ class Game(val config: GameConfig, val seed: Long) {
                     }
                     if (!cancelled) {
                         removeHits(att, c, 2, def)
-                        if (cs.warriors(att) == 0) {
+                        if (fighters(att, c) == 0) {
                             log("The attack is broken before it begins")
                             return
                         }
@@ -554,14 +740,14 @@ class Game(val config: GameConfig, val seed: Long) {
         // Guerrilla war: the Uprising takes the higher roll when defending.
         val attRoll = if (def == Faction.ALLIANCE) low else high
         val defRoll = if (def == Faction.ALLIANCE) high else low
-        var attHits = min(attRoll, cs.warriors(att))
-        var defHits = min(defRoll, cs.warriors(def))
+        var attHits = min(attRoll, fighters(att, c))
+        var defHits = min(defRoll, fighters(def, c))
         lastRoll = "$d1 · $d2"
         log("🎲 Rolled $d1 and $d2: ${att.icon} deals $attHits, ${def.icon} deals $defHits")
 
         if (attHits > 0) attHits = armorers(def, c, attHits)
         if (defHits > 0) defHits = armorers(att, c, defHits)
-        if (cs.warriors(def) == 0) {
+        if (fighters(def, c) == 0) {
             attHits++
             log("${def.icon} is defenseless: +1 hit")
         }
@@ -569,7 +755,7 @@ class Game(val config: GameConfig, val seed: Long) {
         if (ap.hasEffect(CardKind.BRUTAL_TACTICS)) {
             var use = false
             choose(att, "Brutal Tactics: deal an extra hit? ${def.label} scores 1 VP", listOf(
-                Choice("Deal an extra hit", c, ai = if (cs.buildings(def) + cs.tokens(def) > 0 || cs.warriors(def) > attHits) 2.0 else -1.0) { use = true },
+                Choice("Deal an extra hit", c, ai = if (cs.buildings(def) + cs.tokens(def) > 0 || fighters(def, c) > attHits) 2.0 else -1.0) { use = true },
                 Choice("No", ai = 0.0) {},
             ))
             if (use) {
@@ -580,7 +766,7 @@ class Game(val config: GameConfig, val seed: Long) {
         val sappers = dp.effects.firstOrNull { it.kind == CardKind.SAPPERS }
         if (sappers != null) {
             choose(def, "Sappers: discard to deal an extra hit?", listOf(
-                Choice("Use Sappers", c, ai = if (cs.warriors(att) > defHits) 1.0 else -1.0) {
+                Choice("Use Sappers", c, ai = if (fighters(att, c) > defHits) 1.0 else -1.0) {
                     dp.effects.remove(sappers); discard(sappers); defHits++
                 },
                 Choice("Keep Sappers", ai = 0.0) {},
@@ -604,13 +790,17 @@ class Game(val config: GameConfig, val seed: Long) {
         return result
     }
 
-    /** Warriors take hits first; then the owner picks buildings or tokens. */
+    /** Warriors take hits first; then the owner picks buildings or tokens. The Vagabond damages items. */
     internal suspend fun removeHits(victim: Faction, c: Int, n: Int, by: Faction) {
+        if (victim == Faction.VAGABOND) {
+            damageItems(n)
+            return
+        }
         val cs = board[c]
         var left = n
         val w = min(left, cs.warriors(victim))
         if (w > 0) {
-            removeWarriors(c, victim, w, by)
+            removeWarriors(c, victim, w, by, battle = true)
             left -= w
         }
         while (left > 0) {

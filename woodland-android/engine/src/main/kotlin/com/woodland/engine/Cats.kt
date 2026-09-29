@@ -81,7 +81,7 @@ private fun Game.buildOptions(): List<Choice> = CAT_BUILDINGS.flatMap { type ->
 internal suspend fun Game.catsTurn() {
     val p = player(CATS)
     phase = "Birdsong"
-    royalClaim(CATS)
+    generalBirdsong(CATS)
     var placed = 0
     for (cs in board) repeat(cs.buildings.count { it == BuildingType.SAWMILL }) {
         if (woodOnMap() < Game.MAX_WOOD) {
@@ -91,6 +91,7 @@ internal suspend fun Game.catsTurn() {
     if (placed > 0) log("🐱 Sawmills produce $placed wood")
 
     phase = "Daylight"
+    generalDaylight(CATS)
     craftPhase(CATS)
     var actions = 3
     var recruited = false
@@ -174,6 +175,7 @@ internal suspend fun Game.catsTurn() {
     }
 
     phase = "Evening"
+    generalEvening(CATS)
     val recruiters = count(BuildingType.RECRUITER)
     draw(CATS, 1 + (if (recruiters >= 3) 1 else 0) + (if (recruiters >= 5) 1 else 0))
     discardDown(CATS)

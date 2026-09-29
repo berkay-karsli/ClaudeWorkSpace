@@ -19,8 +19,10 @@ Android asks.
 | 🐱 Cat Dominion | Industry: sawmills make wood, wood pays for buildings, 3 actions a turn | Building, crafting |
 | 🦅 Bird Dynasty | A Decree of orders that grows every turn and must be carried out in full, or the leader falls into turmoil | Roosts each evening |
 | 🌿 Forest Uprising | Secret supporters spread sympathy, then revolt to wipe out a clearing and found a base | Sympathy tokens |
+| 🦝 Vagabond | A lone wanderer (Thief, Tinker or Ranger) who spends items to explore ruins, quest, aid and fight | Ruins, quests, relationships, infamy |
 
-Any 2 or 3 factions can play; each seat is "You" or "Computer". First to 30 VP wins.
+Any 2 to 4 factions can play; each seat is "You" or "Computer". First to 30 VP wins, or win by
+playing a dominance card (the Vagabond forms a coalition instead).
 The full rules are under **How to play** in the app.
 
 ## What's in the box
@@ -32,9 +34,13 @@ The full rules are under **How to play** in the app.
   the Bird Dynasty's Decree that plays out the rest of its turn (with fresh dice) to avoid turmoil.
 - `app/` — the Android UI: a drawn board you can tap, option buttons, your hand, and a game log.
 
-Simplifications compared with the physical game: no Vagabond, no ruins or dominance cards, a
-smaller custom deck, and the loser of a battle removes buildings/tokens in the order they choose
-from a list.
+Also implemented: ruins and forests, the shared item supply, dominance cards and coalitions, and
+the lasting card abilities (Armorers, Sappers, Brutal Tactics, Scouting Party, Royal Claim, Stand
+and Deliver, Tax Collector, Command Warren, Cobbler, Burrow Bank).
+
+Differences from the physical game: an original map and a 53-card deck of our own, the Vagabond
+refreshes its items automatically (undamaged first), allied warriors don't move or fight with the
+Vagabond, and Codebreakers is left out. All board art is drawn in code.
 
 ## Build
 

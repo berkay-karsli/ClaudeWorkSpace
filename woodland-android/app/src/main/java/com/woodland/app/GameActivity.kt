@@ -338,6 +338,18 @@ class GameActivity : Activity() {
                     "${col.label}: " + p.decree[col.ordinal].joinToString("") { it.suit.symbol }.ifEmpty { "–" }
                 })
             }
+            Faction.VAGABOND -> {
+                sb.append("${p.character?.label ?: "-"} · ")
+                sb.append(p.items.sortedBy { it.type.ordinal }.joinToString(" ") { i ->
+                    i.type.icon + when {
+                        i.damaged -> "✗"
+                        i.exhausted -> "↓"
+                        else -> ""
+                    }
+                })
+                sb.append("\nRelations: " + p.relations.entries.joinToString(" ") { (o, r) -> "${o.icon}${r.label}" })
+                sb.append("\nQuests: " + game.quests.joinToString("  ") { it.title })
+            }
             Faction.ALLIANCE -> {
                 val sup = if (secret) {
                     Suit.entries.joinToString(" ") { s -> "${s.symbol}${p.supporters.count { it.suit == s }}" }
@@ -347,6 +359,9 @@ class GameActivity : Activity() {
             }
         }
         if (p.effects.isNotEmpty()) sb.append("\nAbilities: " + p.effects.joinToString(", ") { it.name })
+        if (p.craftedItems.isNotEmpty()) sb.append("\nCrafted items: " + p.craftedItems.joinToString("") { it.icon })
+        p.dominance?.let { sb.append("\n👑 Playing for ${it.name}") }
+        p.coalition?.let { sb.append("\n🤝 In coalition with ${it.icon} ${it.label}") }
         return sb.toString()
     }
 
@@ -393,7 +408,7 @@ class GameActivity : Activity() {
     private fun renderOptions() {
         optionsBox.removeAllViews()
         if (game.finished) {
-            promptText.text = "🏆 ${game.winner?.label ?: "Nobody"} wins!"
+            promptText.text = "🏆 ${game.winner?.label ?: "Nobody"} wins!" + (game.coWinner?.let { " (with the ${it.label})" } ?: "")
             optionsBox.addView(optionButton("Back to menu", Palette.FOREST) { finish() })
             return
         }
@@ -407,7 +422,7 @@ class GameActivity : Activity() {
         promptText.text = "${d.faction.icon} ${d.prompt}"
         val shown = d.options.indices.filter { filterClearing < 0 || d.options[it].clearing == filterClearing }
         if (filterClearing >= 0) {
-            optionsBox.addView(optionButton("◀ All options (showing ${WoodlandMap.name(filterClearing)})", 0xFF455A3E.toInt()) {
+            optionsBox.addView(optionButton("◀ All options (showing ${placeName(filterClearing)})", 0xFF455A3E.toInt()) {
                 filterClearing = -1
                 refresh()
             })
@@ -420,7 +435,11 @@ class GameActivity : Activity() {
         }
         for (i in shown) {
             val o = d.options[i]
-            val color = if (o.clearing >= 0) Palette.suit(WoodlandMap.clearings[o.clearing].suit) else Palette.faction(d.faction)
+            val color = when {
+                o.clearing >= Game.FOREST_BASE -> 0xFF7C8B3A.toInt()
+                o.clearing >= 0 -> Palette.suit(WoodlandMap.clearings[o.clearing].suit)
+                else -> Palette.faction(d.faction)
+            }
             optionsBox.addView(optionButton(o.label, 0xFF33452F.toInt(), accent = color) { answer(i) })
         }
     }
@@ -465,7 +484,19 @@ class GameActivity : Activity() {
         showClearing(c)
     }
 
+    private fun placeName(c: Int) =
+        if (c >= Game.FOREST_BASE) "forest ${WoodlandMap.forestName(c - Game.FOREST_BASE)}" else WoodlandMap.name(c)
+
     private fun showClearing(c: Int) {
+        if (c >= Game.FOREST_BASE) {
+            val f = c - Game.FOREST_BASE
+            val here = game.has(Faction.VAGABOND) && game.vbForest == f
+            AlertDialog.Builder(this).setTitle("Forest ${WoodlandMap.forestName(f)}")
+                .setMessage("Borders: " + WoodlandMap.forests[f].clearings.joinToString(" ") { WoodlandMap.name(it) } +
+                    (if (here) "\n🦝 The Vagabond hides here" else ""))
+                .setPositiveButton("OK", null).show()
+            return
+        }
         val cs = game.board[c]
         val lines = mutableListOf<String>()
         lines += "${cs.suit.label} clearing · ${cs.def.slots} slot${if (cs.def.slots > 1) "s" else ""}"
@@ -479,6 +510,8 @@ class GameActivity : Activity() {
             if (f == Faction.ALLIANCE && cs.sympathy) parts += "sympathy"
             if (parts.isNotEmpty()) lines += "${f.icon} " + parts.joinToString(", ")
         }
+        if (cs.hasRuin) lines += "A ruin hides ${cs.ruin.size} item(s)"
+        if (game.has(Faction.VAGABOND) && game.vbClearing == c) lines += "🦝 The Vagabond is here"
         lines += "Paths to: " + WoodlandMap.adjacent[c].joinToString(" ") { WoodlandMap.name(it) }
         AlertDialog.Builder(this).setTitle("Clearing ${WoodlandMap.name(c)}")
             .setMessage(lines.joinToString("\n")).setPositiveButton("OK", null).show()
@@ -539,7 +572,7 @@ class GameActivity : Activity() {
         val w = game.winner
         val scores = game.order.sortedByDescending { game.player(it).vp }
             .joinToString("\n") { "${it.icon} ${it.label}: ${game.player(it).vp} VP" }
-        AlertDialog.Builder(this).setTitle(if (w != null) "🏆 ${w.label} wins!" else "Game over")
+        AlertDialog.Builder(this).setTitle(if (w != null) "🏆 ${w.label} wins!" + (game.coWinner?.let { " ${it.icon} shares it" } ?: "") else "Game over")
             .setMessage("$scores\n\nRounds played: ${game.round}")
             .setPositiveButton("Main menu") { _, _ -> finish() }
             .setNegativeButton("Look at the board", null)

@@ -75,7 +75,7 @@ private fun Game.feasibility(col: DecreeColumn, suit: Suit): Double {
 internal suspend fun Game.birdsTurn() {
     val p = player(BIRDS)
     phase = "Birdsong"
-    royalClaim(BIRDS)
+    generalBirdsong(BIRDS)
     if (p.hand.isEmpty()) {
         draw(BIRDS, 1)
         log("🦅 Emergency orders: draw a card")
@@ -121,10 +121,12 @@ internal suspend fun Game.birdsTurn() {
     }
 
     phase = "Daylight"
+    generalDaylight(BIRDS)
     craftPhase(BIRDS)
     if (!resolveDecree()) turmoil()
 
     phase = "Evening"
+    generalEvening(BIRDS)
     val roosts = count(BuildingType.ROOST)
     score(BIRDS, ROOST_VP[roosts], "$roosts roost${if (roosts == 1) "" else "s"}")
     draw(BIRDS, 1 + (if (roosts >= 3) 1 else 0) + (if (roosts >= 6) 1 else 0))

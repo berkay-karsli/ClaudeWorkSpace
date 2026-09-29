@@ -20,7 +20,7 @@ import com.woodland.engine.Seat
 class MainActivity : Activity() {
     private enum class Mode(val label: String) { YOU("You"), AI("Computer"), OFF("Not playing") }
 
-    private val modes = mutableMapOf(Faction.CATS to Mode.YOU, Faction.BIRDS to Mode.AI, Faction.ALLIANCE to Mode.AI)
+    private val modes = mutableMapOf(Faction.CATS to Mode.YOU, Faction.BIRDS to Mode.AI, Faction.ALLIANCE to Mode.AI, Faction.VAGABOND to Mode.AI)
     private lateinit var continueButton: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -65,7 +65,7 @@ class MainActivity : Activity() {
             root.addView(b)
         }
         root.addView(TextView(this).apply {
-            text = "2 or 3 factions. Several \"You\" seats = pass-and-play on one phone."
+            text = "2 to 4 factions. Several \"You\" seats = pass-and-play on one phone."
             setTextColor(0xFFB8C9A8.toInt())
             textSize = 13f
             setPadding(0, dp(4), 0, dp(12))

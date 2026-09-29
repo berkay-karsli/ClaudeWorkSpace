@@ -48,7 +48,7 @@ private fun Game.spreadTargets(): List<Int> {
 internal suspend fun Game.allianceTurn() {
     val p = player(ALLIANCE)
     phase = "Birdsong"
-    royalClaim(ALLIANCE)
+    generalBirdsong(ALLIANCE)
     var done = false
     while (!done) {
         val choices = mutableListOf<Choice>()
@@ -82,6 +82,7 @@ internal suspend fun Game.allianceTurn() {
     }
 
     phase = "Daylight"
+    generalDaylight(ALLIANCE)
     craftPhase(ALLIANCE)
     done = false
     while (!done) {
@@ -108,6 +109,7 @@ internal suspend fun Game.allianceTurn() {
     }
 
     phase = "Evening"
+    generalEvening(ALLIANCE)
     var ops = p.officers
     done = false
     while (!done && ops > 0) {
