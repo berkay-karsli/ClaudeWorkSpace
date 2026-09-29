@@ -279,7 +279,8 @@ object OctopusRules : FactionRules {
         val s = st(g, p)
         val arms = s.arms.count { it >= 0 }
         val orders = s.orders.count { it != null }
-        return "$arms of $ARMS arms · $orders orders · ${s.garden.size} treasures (${gardenKinds(s)} kinds)"
+        val kinds = gardenKinds(s)
+        return "$arms of $ARMS arms · $orders order${if (orders == 1) "" else "s"} · ${s.garden.size} treasure${if (s.garden.size == 1) "" else "s"} of $kinds kind${if (kinds == 1) "" else "s"}"
     }
 
     override fun value(g: GameState, p: Int, self: Boolean): Double {

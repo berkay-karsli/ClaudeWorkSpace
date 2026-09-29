@@ -89,14 +89,43 @@ fun RulesDialog(factions: List<FactionId>, onClose: () -> Unit) {
     }
 }
 
+/** The rules every faction shares, each beside a picture, two to a row. */
 @Composable
 fun SharedRules() {
-    for (r in Plates.shared) {
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(r.title, color = Reef.ink, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-            Text(r.text, color = Reef.muted, fontSize = 14.sp)
+    for (row in Plates.shared.chunked(2)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            for (r in row) {
+                Row(
+                    Modifier.weight(1f).background(Reef.raised, RoundedCornerShape(12.dp)).border(1.dp, Reef.line, RoundedCornerShape(12.dp)).padding(8.dp),
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    Box(Modifier.size(40.dp).background(Color(0xFF0E3042), RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
+                        ArtImage(sharedIcon(r.title), 34.dp)
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Column {
+                        Text(r.title, color = Reef.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                        Text(stripTags(r.text), color = Reef.muted, fontSize = 12.sp, lineHeight = 15.sp)
+                    }
+                }
+            }
+            if (row.size == 1) Spacer(Modifier.weight(1f))
         }
     }
+}
+
+private fun sharedIcon(title: String) = when (title) {
+    "Twelve reefs" -> com.reef.app.ui.art.Suits.kelp
+    "Edges of the map" -> com.reef.app.ui.art.Scenery.hole
+    "A turn" -> Icons.day
+    "Pieces" -> com.reef.app.ui.art.Tokens.coral
+    "Rule and moving" -> Icons.move
+    "Currents" -> Icons.current
+    "Attacks and hits", "Battle" -> Icons.battle
+    "Cards" -> Icons.card
+    "Gear" -> Icons.craft
+    "Winning" -> Icons.dominance
+    else -> Icons.done
 }
 
 /**

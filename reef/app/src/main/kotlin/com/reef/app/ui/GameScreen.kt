@@ -141,11 +141,11 @@ fun GameScreen(controller: GameController, onExit: () -> Unit, onRematch: () -> 
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Scoreboard(g, Modifier.weight(1f)) { board = it }
-                    SmallButton("Rules") { showRules = true }
-                    Spacer(Modifier.width(4.dp))
-                    SmallButton("Log") { showLog = true }
-                    Spacer(Modifier.width(4.dp))
-                    SmallButton("Menu") { onExit() }
+                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        SmallButton("Rules") { showRules = true }
+                        SmallButton("Log") { showLog = true }
+                        SmallButton("Menu") { onExit() }
+                    }
                 }
                 Line()
                 Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -321,11 +321,11 @@ private fun Instruction(text: String) {
 /** Every faction's portrait and VP in one row. Tap one to open its board. */
 @Composable
 private fun Scoreboard(g: GameState, modifier: Modifier = Modifier, onOpen: (FactionId) -> Unit) {
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
         g.players.forEachIndexed { i, pl ->
             val turn = g.phase != Phase.OVER && g.current == i
             Box(Modifier.clickable { onOpen(pl.faction) }.padding(bottom = 4.dp, end = 6.dp)) {
-                Portrait(pl.faction, 38.dp, ring = if (turn) 3.dp else 1.5.dp)
+                Portrait(pl.faction, 42.dp, ring = if (turn) 3.dp else 1.5.dp)
                 VpCoin(pl.vp, Modifier.align(Alignment.BottomEnd).offset(x = 6.dp, y = 4.dp))
                 if (!pl.human) {
                     Text(
@@ -482,7 +482,7 @@ private fun GameOver(g: GameState, onExit: () -> Unit, onRematch: () -> Unit) {
 @Composable
 private fun SmallButton(text: String, onClick: () -> Unit) {
     Box(
-        Modifier.width(46.dp).height(26.dp).border(1.dp, Reef.line, RoundedCornerShape(8.dp)).clickable(onClick = onClick),
+        Modifier.width(52.dp).height(19.dp).border(1.dp, Reef.line, RoundedCornerShape(6.dp)).clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
-    ) { Text(text, color = Reef.muted, fontSize = 12.sp) }
+    ) { Text(text, color = Reef.muted, fontSize = 11.sp, lineHeight = 12.sp) }
 }
