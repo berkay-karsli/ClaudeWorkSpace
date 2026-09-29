@@ -28,9 +28,15 @@ internal class ArtScope(private val b: ImageVector.Builder) {
         )
     }
 
-    /** A group, transformed the Compose way: translate(tx + px, ty + py) rotate scale translate(-px, -py). */
-    fun g(tx: Float = 0f, ty: Float = 0f, rot: Float = 0f, px: Float = 0f, py: Float = 0f, sx: Float = 1f, sy: Float = sx, block: ArtScope.() -> Unit) {
-        b.addGroup(rotate = rot, pivotX = px, pivotY = py, scaleX = sx, scaleY = sy, translationX = tx, translationY = ty)
+    /**
+     * A group, transformed the Compose way: translate(tx + px, ty + py) rotate scale translate(-px, -py).
+     * [clip] is a path in the group's own coordinates that its children are drawn inside.
+     */
+    fun g(tx: Float = 0f, ty: Float = 0f, rot: Float = 0f, px: Float = 0f, py: Float = 0f, sx: Float = 1f, sy: Float = sx, clip: String? = null, block: ArtScope.() -> Unit) {
+        b.addGroup(
+            rotate = rot, pivotX = px, pivotY = py, scaleX = sx, scaleY = sy, translationX = tx, translationY = ty,
+            clipPathData = if (clip != null) addPathNodes(clip) else androidx.compose.ui.graphics.vector.EmptyPath,
+        )
         block()
         b.clearGroup()
     }

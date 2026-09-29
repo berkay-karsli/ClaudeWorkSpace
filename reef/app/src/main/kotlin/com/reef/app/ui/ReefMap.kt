@@ -190,14 +190,25 @@ private fun DrawScope.drawWater(t: MapTransform, measurer: TextMeasurer, art: Pa
     val top = t.screen(0f, 0f).y
     val bottom = t.screen(0f, Board.HEIGHT).y
     drawRect(Brush.verticalGradient(listOf(Color(0xFF1F7C92), Color(0xFF12526A), Color(0xFF0A3347), Color(0xFF051B26)), startY = top, endY = bottom))
-    // Sunlight falling through the water.
-    for ((x, w) in listOf(120f to 60f, 300f to 90f, 520f to 70f, 690f to 50f)) {
-        val p = Path().apply {
-            val a = t.screen(x, 0f); val b = t.screen(x + w, 0f)
-            val c = t.screen(x + w - 140f, 460f); val d = t.screen(x - 170f, 460f)
-            moveTo(a.x, a.y); lineTo(b.x, b.y); lineTo(c.x, c.y); lineTo(d.x, d.y); close()
+    // The water is printed too: rows of carved wave lines.
+    var row = 0
+    var y = 70f
+    while (y < 520f) {
+        val p = Path()
+        var x = if (row % 2 == 0) -20f else 10f
+        val start = t.screen(x, y)
+        p.moveTo(start.x, start.y)
+        while (x < Board.WIDTH + 20f) {
+            val mid = t.screen(x + 15f, y - 4f)
+            val end = t.screen(x + 30f, y)
+            p.quadraticTo(mid.x, mid.y, end.x, end.y)
+            x += 60f
+            val gap = t.screen(x, y)
+            p.moveTo(gap.x, gap.y)
         }
-        drawPath(p, Brush.verticalGradient(listOf(Color(0x14FFFFFF), Color(0x00FFFFFF)), startY = top, endY = t.screen(0f, 460f).y))
+        drawPath(p, Color(0x1FF3E7CC), style = Stroke(width = 1.6f * s, cap = StrokeCap.Round))
+        y += 26f
+        row++
     }
     // The shore along the top, the Trench along the bottom.
     drawPath(wavy(t, 40f, 5f, 60f, down = true), Brush.verticalGradient(listOf(Color(0xFFF3DFB0), Color(0xFFCFAE6A)), startY = top, endY = t.screen(0f, 46f).y))
@@ -311,11 +322,14 @@ private fun DrawScope.drawReef(g: GameState, reef: Int, t: MapTransform, measure
     if (info.gate) {
         drawCircle(Color(0xCCF6F0E2), radius = (R + 7f) * s, center = c, style = Stroke(width = 2f * s, pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f * s, 5f * s))))
     }
-    drawCircle(Brush.radialGradient(listOf(Color(0xFF2F6A73), Color(0xFF123843)), center = Offset(c.x, c.y - 10f * s), radius = R * s * 1.2f), radius = R * s, center = c)
-    image(art[LANDMARKS[reef] ?: suitScenery(suit)], Offset(c.x, c.y + 4f * s), 70f * s, alpha = 0.55f)
+    // Each reef is a print on paper: its scenery printed faintly under the pieces.
+    drawCircle(Brush.radialGradient(listOf(Reef.paperLight, Reef.paperDark), center = Offset(c.x, c.y - 10f * s), radius = R * s * 1.2f), radius = R * s, center = c)
+    image(art[LANDMARKS[reef] ?: suitScenery(suit)], Offset(c.x, c.y + 4f * s), 70f * s, alpha = 0.32f)
     // The rim shows who rules here: the ruler's color, or the suit's when nobody does.
-    val rim = ruler?.let { Reef.faction(g.players[it].faction) } ?: suitColor.copy(alpha = 0.8f)
-    drawCircle(rim, radius = R * s, center = c, style = Stroke(width = (if (ruler != null) 4.5f else 2.5f) * s))
+    val rim = ruler?.let { Reef.faction(g.players[it].faction) } ?: suitColor
+    val rimWidth = if (ruler != null) 5f else 3f
+    drawCircle(Reef.printInk, radius = R * s, center = c, style = Stroke(width = (rimWidth + 3f) * s))
+    drawCircle(rim, radius = R * s, center = c, style = Stroke(width = rimWidth * s))
     if (highlighted) drawCircle(Reef.accent, radius = (R + 5f) * s, center = c, style = Stroke(width = 3.5f * s))
 
     image(art[Art.suit(suit)], t.screen(info.x, info.y - 24f), 20f * s)
@@ -329,9 +343,9 @@ private fun DrawScope.drawReef(g: GameState, reef: Int, t: MapTransform, measure
     for (i in 0 until info.slots) {
         val sc = Offset(c.x - rowWidth / 2f + i * (slot + gap) + slot / 2f, c.y - 3f * s)
         val piece = filling.getOrNull(i)
-        drawRoundRect(Color(0xB3081820), topLeft = Offset(sc.x - slot / 2f, sc.y - slot / 2f), size = Size(slot, slot), cornerRadius = androidx.compose.ui.geometry.CornerRadius(4f * s))
+        drawRoundRect(Reef.paperLight, topLeft = Offset(sc.x - slot / 2f, sc.y - slot / 2f), size = Size(slot, slot), cornerRadius = androidx.compose.ui.geometry.CornerRadius(4f * s))
         if (piece == null) {
-            drawRoundRect(Reef.ink.copy(alpha = 0.55f), topLeft = Offset(sc.x - slot / 2f, sc.y - slot / 2f), size = Size(slot, slot), cornerRadius = androidx.compose.ui.geometry.CornerRadius(4f * s), style = Stroke(width = 1.2f * s))
+            drawRoundRect(Reef.printInk, topLeft = Offset(sc.x - slot / 2f, sc.y - slot / 2f), size = Size(slot, slot), cornerRadius = androidx.compose.ui.geometry.CornerRadius(4f * s), style = Stroke(width = 1.2f * s))
         } else {
             val owner = piece.owner
             if (owner != null && piece.type.building) {
@@ -365,7 +379,8 @@ private fun DrawScope.drawReef(g: GameState, reef: Int, t: MapTransform, measure
         if (n == 0) continue
         val o = spots[spot++ % spots.size]
         val mc = t.screen(info.x + o.x, info.y + o.y)
-        drawCircle(Brush.radialGradient(listOf(Color(0xFF2C6E86), Color(0xFF0E3042)), center = mc, radius = 15f * s), radius = 15f * s, center = mc)
+        drawCircle(Brush.radialGradient(listOf(Reef.paperLight, Reef.paperDark), center = mc, radius = 15f * s), radius = 15f * s, center = mc)
+        drawCircle(Reef.printInk, radius = 15.5f * s, center = mc, style = Stroke(width = 3.6f * s))
         drawCircle(Reef.faction(f), radius = 15f * s, center = mc, style = Stroke(width = 2.2f * s))
         image(art[Art.portrait(f)], mc, 26f * s)
         val mantle = f == FactionId.OCTOPUS && octo?.mantle == reef

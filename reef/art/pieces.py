@@ -76,21 +76,17 @@ def suit_moon():
 
 def piece_coral():
     a = Art("piece_coral", 48, 48, "piece")
-    ink = "#7a2233"
-    a.add(ellipse(24, 43, 17, 3.6), fill="#e9d3a8", stroke="#9d7a44", width=1.2)
+    ink = "#1c2229"
+    a.add(ellipse(24, 43, 15, 3.6), fill=ink)
     parts = [taper(p, w0, w1) for p, w0, w1 in (
-        ([(16, 30), (11, 20), (9, 11)], 6.5, 5.5), ([(24, 26), (24, 15), (23, 6)], 7, 6), ([(32, 30), (37, 20), (39, 11)], 6.5, 5.5))]
-    parts.append(blob([(8, 43), (8, 34), (14, 27), (24, 24), (34, 27), (40, 34), (40, 43)]))
+        ([(24, 43), (23, 33), (22, 24)], 7.5, 6), ([(23, 33), (15, 27), (12, 16)], 5.5, 4), ([(22, 27), (27, 18), (27, 8)], 5.5, 4),
+        ([(24, 37), (32, 31), (36, 20)], 5.5, 4))]
     for d in parts:
-        a.add(d, fill=ink, stroke=ink, width=3)
+        a.add(d, fill=ink, stroke=ink, width=3.5)
     for d in parts:
-        a.add(d, fill=vgrad(4, 43, "#ffb8c0", "#f06a7e"))
-    for x, y in ((9, 10), (23, 5), (39, 10)):
-        for k in range(5):
-            px, py = arc_pt(x, y, 2.2, -90 + k * 72)
-            a.add(circle(px, py, 1.5), fill="#fff4f6")
-        a.add(circle(x, y, 1.2), fill="#ffd66b")
-    a.add(ellipse(18, 32, 4, 2.2), fill="#ffffff", alpha=0.45)
+        a.add(d, fill="#e0606a")
+    for x, y in ((12, 15), (27, 7), (36, 19)):
+        a.add(circle(x, y, 2.2), fill="#f3e7cc", stroke=ink, width=1)
     return a
 
 

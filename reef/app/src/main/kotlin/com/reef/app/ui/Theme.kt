@@ -20,6 +20,13 @@ object Reef {
     val shore = Color(0xFF3D3825)
     val blood = Color(0xFFE0474C)
 
+    /** The print paper the art sits on, and the ink it is printed with. */
+    val paper = Color(0xFFEFE2C4)
+    val paperLight = Color(0xFFF7EED9)
+    val paperDark = Color(0xFFE0CDA2)
+    val printInk = Color(0xFF1C2229)
+    val paperBrush = androidx.compose.ui.graphics.Brush.radialGradient(listOf(paperLight, paperDark))
+
     fun suit(s: Suit): Color = when (s) {
         Suit.KELP -> Color(0xFF86BF5E)
         Suit.SPONGE -> Color(0xFFF0B95A)

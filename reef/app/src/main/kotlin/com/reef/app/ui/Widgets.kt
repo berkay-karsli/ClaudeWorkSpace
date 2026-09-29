@@ -54,7 +54,7 @@ fun Portrait(f: FactionId, size: Dp, modifier: Modifier = Modifier, ring: Dp = 2
         modifier
             .size(size)
             .clip(CircleShape)
-            .background(Brush.radialGradient(listOf(Color(0xFF2C6E86), Color(0xFF0E3042))))
+            .background(Reef.paperBrush)
             .border(ring, color, CircleShape),
         contentAlignment = Alignment.Center,
     ) {
@@ -150,7 +150,7 @@ fun ActionCard(f: FactionId, kind: String, ways: Int, selected: Boolean, modifie
         verticalArrangement = Arrangement.spacedBy(5.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(38.dp).background(Color(0xFF0E3042), RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(38.dp).background(Reef.paperBrush, RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
                 ArtImage(Art.action(kind), 32.dp)
             }
             Spacer(Modifier.width(8.dp))

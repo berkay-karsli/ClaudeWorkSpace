@@ -82,8 +82,10 @@ class Path:
 
 
 class Group:
-    def __init__(self, tx=0.0, ty=0.0, rot=0.0, px=0.0, py=0.0, sx=1.0, sy=None):
+    def __init__(self, tx=0.0, ty=0.0, rot=0.0, px=0.0, py=0.0, sx=1.0, sy=None, clip=None):
+        """[clip] is a path, in the group's own coordinates, that its children are drawn inside."""
         self.tx, self.ty, self.rot, self.px, self.py = tx, ty, rot, px, py
+        self.clip = clip
         self.sx = sx
         self.sy = sx if sy is None else sy
         self.children = []
@@ -300,7 +302,12 @@ def _svg_nodes(nodes, defs, prefix):
     for n in nodes:
         if isinstance(n, Group):
             t = f"translate({f(n.tx + n.px)} {f(n.ty + n.py)}) rotate({f(n.rot)}) scale({f(n.sx)} {f(n.sy)}) translate({f(-n.px)} {f(-n.py)})"
-            out.append(f'<g transform="{t}">' + _svg_nodes(n.children, defs, prefix) + "</g>")
+            inner = _svg_nodes(n.children, defs, prefix)
+            if n.clip:
+                cid = f"{prefix}c{len(defs)}"
+                defs.append(f'<clipPath id="{cid}"><path d="{n.clip}"/></clipPath>')
+                inner = f'<g clip-path="url(#{cid})">' + inner + "</g>"
+            out.append(f'<g transform="{t}">' + inner + "</g>")
         else:
             fill, fa = _svg_paint(n.fill, defs, prefix)
             stroke, sa = _svg_paint(n.stroke, defs, prefix)
@@ -356,6 +363,8 @@ def _kt_nodes(nodes, indent):
                 v = getattr(n, key)
                 if abs(v - default) > 1e-9:
                     args.append(f"{key} = {_kt_float(v)}")
+            if n.clip:
+                args.append(f'clip = "{n.clip}"')
             out.append(f"{pad}g({', '.join(args)}) {{")
             out += _kt_nodes(n.children, indent + 4)
             out.append(f"{pad}}}")

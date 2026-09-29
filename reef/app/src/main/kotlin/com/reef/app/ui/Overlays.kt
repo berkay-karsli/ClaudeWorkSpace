@@ -103,7 +103,7 @@ fun SharedRules() {
                     Modifier.weight(1f).background(Reef.raised, RoundedCornerShape(12.dp)).border(1.dp, Reef.line, RoundedCornerShape(12.dp)).padding(8.dp),
                     verticalAlignment = Alignment.Top,
                 ) {
-                    Box(Modifier.size(40.dp).background(Color(0xFF0E3042), RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
+                    Box(Modifier.size(40.dp).background(Reef.paperBrush, RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
                         ArtImage(sharedIcon(r.title), 34.dp)
                     }
                     Spacer(Modifier.width(8.dp))
@@ -164,7 +164,7 @@ fun FactionBoard(f: FactionId, modifier: Modifier = Modifier) {
                     Modifier.fillMaxWidth().background(Reef.raised, RoundedCornerShape(12.dp)).border(1.dp, Reef.line, RoundedCornerShape(12.dp)).padding(8.dp),
                     verticalAlignment = Alignment.Top,
                 ) {
-                    Box(Modifier.size(44.dp).background(Color(0xFF0E3042), RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
+                    Box(Modifier.size(44.dp).background(Reef.paperBrush, RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
                         ArtImage(Guide.ruleIcon(f, r.title), 38.dp)
                     }
                     Spacer(Modifier.width(10.dp))

@@ -16,7 +16,7 @@ for art in catalog.all_art():
 html = """<!doctype html><meta charset="utf-8"><style>
 body{margin:0;padding:16px;background:#0d2a3a;font:12px system-ui;color:#cfe;display:flex;flex-wrap:wrap;gap:12px}
 figure{margin:0;text-align:center}
-.bg{background:radial-gradient(circle at 50% 40%,#2c6e86,#123a4d);border-radius:14px;padding:6px}
+.bg{background:radial-gradient(circle at 50% 40%,#f7eed9,#e2d1aa);border-radius:14px;padding:6px}
 </style>""" + "".join(cells)
 open(out, "w").write(html)
 print(len(cells), "pictures")
