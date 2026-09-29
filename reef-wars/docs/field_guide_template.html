@@ -1,0 +1,379 @@
+<title>Reef Wars Field Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..800;1,6..96,400..700&family=Figtree:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a naturalist's field guide. Changes first, then the reef map and shared rules, then one specimen plate per faction, easiest to learn first. */
+:root {
+  --bg: #e7efee;
+  --surface: #f5f9f8;
+  --ink: #0f2a33;
+  --muted: #4b666e;
+  --line: #bfd2d1;
+  --accent: #c94c37;
+  --current: #1d7f8c;
+  --shore: #ddd2ad;
+  --glow: #d9a92a;
+
+  --kelp: #4b8636;
+  --sponge: #c7861c;
+  --pearl: #6680bf;
+  --moon: #7d8594;
+
+  --f-shark: #496a79;
+  --f-sardine: #6f7f91;
+  --f-lion: #c4552b;
+  --f-star: #b0457a;
+  --f-coral: #de5f69;
+  --f-jelly: #8656b4;
+  --f-parrot: #178f82;
+  --f-turtle: #767321;
+  --f-snake: #2383ab;
+  --f-remora: #6b6356;
+  --f-hermit: #a3622a;
+  --f-angler: #3a3f8a;
+  --f-octo: #9e2a3a;
+  --f-court-a: #c64a8f;
+  --f-court-b: #d9a02a;
+  --f-court-c: #2d8f9a;
+
+  --display: "Bodoni Moda", "Bodoni 72", Didot, Georgia, serif;
+  --body: "Figtree", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+
+  --s-cap: 0.75rem;
+  --s-small: 0.875rem;
+  --s-body: 1rem;
+  --s-lead: 1.1875rem;
+  --s-h3: 1.875rem;
+  --s-h2: 2.375rem;
+  --s-hero: clamp(3.5rem, 11vw, 7rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #06171d; --surface: #0c232b; --ink: #d9e9e8; --muted: #8eaab1; --line: #1f3f48;
+    --accent: #ff7d63; --current: #4cc3cf; --shore: #3d3825; --glow: #f3d36b;
+    --kelp: #86bf5e; --sponge: #f0b95a; --pearl: #9fb4ea; --moon: #c9cfdb;
+    --f-shark: #8db3c4; --f-sardine: #c0ccda; --f-lion: #f08a5d; --f-star: #ec8bbd; --f-coral: #ff939a;
+    --f-jelly: #c29be9; --f-parrot: #4fd0bd; --f-turtle: #cfc85a; --f-snake: #6ccbef; --f-remora: #bdb3a2;
+    --f-hermit: #eaa25e; --f-angler: #a2a7f3; --f-octo: #f07487;
+    --f-court-a: #f08ac6; --f-court-b: #f0c55a; --f-court-c: #5fd3dd;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #06171d; --surface: #0c232b; --ink: #d9e9e8; --muted: #8eaab1; --line: #1f3f48;
+  --accent: #ff7d63; --current: #4cc3cf; --shore: #3d3825; --glow: #f3d36b;
+  --kelp: #86bf5e; --sponge: #f0b95a; --pearl: #9fb4ea; --moon: #c9cfdb;
+  --f-shark: #8db3c4; --f-sardine: #c0ccda; --f-lion: #f08a5d; --f-star: #ec8bbd; --f-coral: #ff939a;
+  --f-jelly: #c29be9; --f-parrot: #4fd0bd; --f-turtle: #cfc85a; --f-snake: #6ccbef; --f-remora: #bdb3a2;
+  --f-hermit: #eaa25e; --f-angler: #a2a7f3; --f-octo: #f07487;
+  --f-court-a: #f08ac6; --f-court-b: #f0c55a; --f-court-c: #5fd3dd;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: var(--s-body);
+  line-height: 1.6;
+  padding-inline: 20px;
+  padding-block: 0 64px;
+}
+.wrap { max-width: 1080px; margin-inline: auto; }
+a { color: inherit; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 600; text-wrap: balance; margin: 0; line-height: 1.08; }
+p { margin: 0; }
+.cap { font-family: var(--mono); font-size: var(--s-cap); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.muted { color: var(--muted); }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Hero */
+.hero { padding-block: 56px 28px; display: grid; gap: 18px; }
+.hero h1 { font-size: var(--s-hero); font-weight: 500; letter-spacing: -0.01em; }
+.hero h1 em { font-style: italic; color: var(--accent); font-weight: 400; }
+.lede { font-size: var(--s-lead); max-width: 40em; }
+.facts { display: flex; flex-wrap: wrap; gap: 8px 22px; }
+.facts span { font-family: var(--mono); font-size: var(--s-small); color: var(--muted); }
+.facts b { color: var(--ink); font-weight: 500; }
+
+/* Sections */
+section.block { padding-block: 56px 8px; display: grid; gap: 22px; }
+section.block > * { min-width: 0; }
+.block-head { display: grid; gap: 8px; max-width: 46em; }
+.block-head h2 { font-size: var(--s-h2); }
+.block-head p { color: var(--muted); }
+.sub { font-family: var(--body); font-size: var(--s-lead); font-weight: 700; margin-top: 8px; }
+
+/* Changes */
+.answers { margin: 0; padding-left: 20px; display: grid; gap: 8px; max-width: 52em; }
+.changes { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 40px; }
+.changes li { border-top: 1px solid var(--line); padding-block: 12px; display: grid; gap: 4px; min-width: 0; }
+.changes b { font-weight: 700; }
+.changes p { font-size: var(--s-small); }
+.was, .now { font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; margin-right: 4px; }
+.was { color: var(--muted); }
+.now { color: var(--current); }
+.principles { margin: 0; padding: 20px 22px 20px 40px; display: grid; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+
+/* Map */
+.map { margin: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding-block: 20px 16px; }
+.map-scroll { overflow-x: auto; }
+.map svg { display: block; width: 100%; min-width: 640px; height: auto; }
+.map figcaption { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 14px; font-size: var(--s-small); color: var(--muted); align-items: center; }
+.key { display: inline-flex; align-items: center; gap: 7px; }
+.sw { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+.sw.k { background: var(--kelp); } .sw.s { background: var(--sponge); } .sw.p { background: var(--pearl); } .sw.m { background: var(--moon); }
+.sw.gate { background: transparent; border: 1.5px dashed var(--ink); }
+.sw.nook { border-radius: 2px; background: var(--surface); border: 1.5px solid var(--ink); width: 10px; height: 10px; }
+.sw.cur { width: 22px; height: 2px; border-radius: 0; background: var(--current); position: relative; }
+.sw.cur::after { content: ""; position: absolute; right: -2px; top: -4px; border-left: 7px solid var(--current); border-top: 5px solid transparent; border-bottom: 5px solid transparent; }
+.sw.band { width: 22px; height: 10px; border-radius: 2px; }
+.sw.band.sh { background: var(--shore); } .sw.band.tr { background: var(--ink); }
+
+svg .edge { stroke: var(--muted); stroke-width: 3; stroke-linecap: round; opacity: .55; }
+svg .curr { stroke: var(--current); stroke-width: 3.5; stroke-linecap: round; fill: none; }
+svg .arrowhead { fill: var(--current); }
+svg .reef circle.under { fill: var(--bg); }
+svg .reef circle.body { fill-opacity: .16; stroke-width: 2.5; }
+svg .reef.k circle.body { fill: var(--kelp); stroke: var(--kelp); }
+svg .reef.s circle.body { fill: var(--sponge); stroke: var(--sponge); }
+svg .reef.p circle.body { fill: var(--pearl); stroke: var(--pearl); }
+svg .reef circle.gate { fill: none; stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 4 4; opacity: .7; }
+svg .reef .nook { fill: var(--surface); stroke: var(--ink); stroke-width: 1.5; }
+svg .reef .suit { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-anchor: middle; fill: var(--ink); opacity: .75; }
+svg .reef .name { font-family: var(--body); font-weight: 600; font-size: 14px; text-anchor: middle; fill: var(--ink); paint-order: stroke; stroke: var(--bg); stroke-width: 5px; stroke-linejoin: round; }
+svg .shore { fill: var(--shore); }
+svg .trench { fill: var(--ink); opacity: .88; }
+svg .band-label { font-family: var(--mono); font-size: 12px; letter-spacing: .3em; text-anchor: middle; }
+svg .shore-label { fill: var(--ink); }
+svg .trench-label { fill: var(--bg); }
+svg .rim { stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 2 4; opacity: .6; }
+svg .gyre-label { font-family: var(--display); font-style: italic; font-size: 17px; fill: var(--current); text-anchor: middle; }
+
+/* Shared rules */
+.rules { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 40px; }
+.rule { padding-block: 14px; border-top: 1px solid var(--line); display: grid; gap: 4px; min-width: 0; align-content: start; }
+.rule h3 { font-family: var(--body); font-size: var(--s-body); font-weight: 700; }
+.rule b { font-weight: 700; }
+.new { font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--current); border: 1px solid var(--current); border-radius: 4px; padding: 0 5px; margin-left: 8px; vertical-align: 2px; }
+
+/* At a glance */
+.table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.glance { border-collapse: collapse; width: 100%; min-width: 820px; font-size: var(--s-small); }
+.glance th, .glance td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.glance tbody tr:last-child th, .glance tbody tr:last-child td { border-bottom: 0; }
+.glance thead th { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+.glance .num { font-family: var(--mono); color: var(--muted); width: 3.5em; }
+.glance th[scope="row"] { font-weight: 700; white-space: nowrap; }
+.glance th[scope="row"] a { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; }
+.glance th[scope="row"] a:hover span { text-decoration: underline; }
+.glance svg.mini { width: 26px; height: 26px; flex: none; }
+.glance .v { text-align: center; width: 4.6em; }
+.glance .by { color: var(--muted); }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--ink); }
+.dash { display: inline-block; width: 10px; height: 2px; background: var(--line); vertical-align: middle; }
+
+/* Plates */
+.plates { display: grid; }
+.plate { padding-block: 40px; border-top: 1px solid var(--line); display: grid; gap: 16px; scroll-margin-top: 16px; }
+.plate-head { display: grid; grid-template-columns: 84px minmax(0, 1fr) auto; gap: 18px; align-items: center; }
+.specimen { width: 84px; height: 84px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); display: grid; place-items: center; }
+.specimen svg { width: 60px; height: 60px; }
+.plate-title { display: grid; gap: 4px; min-width: 0; }
+.plate-title h3 { font-size: var(--s-h3); }
+.taxon { font-size: var(--s-small); color: var(--muted); }
+.taxon i { font-family: var(--display); font-size: 1.05rem; color: var(--ink); }
+.stats { display: grid; grid-template-columns: auto auto; gap: 4px 16px; margin: 0; align-items: baseline; }
+.stats dt { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.stats dd { margin: 0; font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+.pips { display: inline-flex; gap: 4px; vertical-align: middle; }
+.pips i { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--ink); display: inline-block; }
+.pips i.on { background: var(--ink); }
+.tagline { font-family: var(--display); font-style: italic; font-size: 1.4rem; line-height: 1.3; }
+.idea { max-width: 46em; font-size: var(--s-lead); line-height: 1.55; }
+.verbs { display: flex; flex-wrap: wrap; gap: 6px; }
+.verbs > span { font-family: var(--mono); font-size: 12px; letter-spacing: .04em; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--line); }
+.verbs > span.on { border-color: var(--ink); color: var(--ink); }
+.verbs > span.off { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--muted); }
+.plate-body { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 32px; align-items: start; }
+.plate-body h4 { margin: 0 0 8px; font-family: var(--mono); font-size: var(--s-cap); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+.mech { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.mech li { padding-left: 16px; position: relative; }
+.mech li::before { content: ""; position: absolute; left: 0; top: .72em; width: 6px; height: 6px; border-radius: 50%; background: var(--fc, var(--accent)); }
+.mech b { font-weight: 700; }
+.side { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 18px 16px; display: grid; gap: 16px; min-width: 0; }
+.side ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+.side .muted { display: block; font-size: var(--s-small); margin-top: 2px; }
+.turn { margin: 0; display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 6px 12px; }
+.turn dt { font-family: var(--mono); font-size: 12px; letter-spacing: .05em; color: var(--current); padding-top: 2px; }
+.turn dd { margin: 0; }
+.plate-foot { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 32px; font-size: var(--s-small); }
+.plate-foot p { color: var(--muted); }
+.plate-foot b { font-family: var(--mono); font-weight: 500; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink); margin-right: 6px; }
+.press { display: grid; gap: 6px; }
+
+/* Lineups */
+.lineups { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.lineup { border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.lineup h3 { font-size: 1.35rem; }
+.lineup ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: var(--s-small); }
+.lineup li { display: flex; justify-content: space-between; gap: 12px; font-variant-numeric: tabular-nums; }
+.lineup li span:last-child { font-family: var(--mono); color: var(--muted); }
+.lineup .sum { border-top: 1px solid var(--line); padding-top: 6px; font-family: var(--mono); font-size: var(--s-small); display: flex; justify-content: space-between; }
+
+/* App + plan */
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; align-items: start; }
+.plain { margin: 0; padding-left: 20px; display: grid; gap: 10px; }
+.plain b { font-weight: 700; }
+ol.phases { list-style: none; margin: 0; padding: 0; counter-reset: ph; display: grid; gap: 14px; }
+ol.phases li { counter-increment: ph; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 12px; }
+ol.phases li::before { content: counter(ph); font-family: var(--display); font-size: 1.6rem; line-height: 1; color: var(--accent); }
+.ask { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 24px; display: grid; gap: 12px; }
+
+@media (max-width: 900px) {
+  .lineups { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .rules, .changes, .plate-body, .plate-foot, .two { grid-template-columns: minmax(0, 1fr); }
+  .plate-body, .plate-foot, .two { gap: 20px; }
+  .plate-head { grid-template-columns: 64px minmax(0, 1fr); }
+  .specimen { width: 64px; height: 64px; }
+  .specimen svg { width: 46px; height: 46px; }
+  .stats { grid-column: 1 / -1; justify-content: start; grid-template-columns: auto auto auto auto; }
+  .stats dd { text-align: left; }
+}
+@media (max-width: 420px) {
+  body { padding-inline: 16px; }
+  .lineups { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="chroma" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" style="stop-color:var(--f-court-a)"/>
+      <stop offset=".5" style="stop-color:var(--f-court-b)"/>
+      <stop offset="1" style="stop-color:var(--f-court-c)"/>
+    </linearGradient>
+    %%SYMBOLS%%
+  </defs>
+</svg>
+
+<div class="wrap">
+
+<header class="hero">
+  <p class="cap">Design draft 2 · consistency pass · for your review</p>
+  <h1>Reef <em>Wars</em></h1>
+  <p class="lede">An asymmetric strategy game for Android, built on Root's bones and set on a coral reef. %%COUNT%% factions fight over twelve reefs, and each one is built around a single idea.</p>
+  <div class="facts">
+    <span><b>%%COUNT%%</b> factions</span>
+    <span><b>2–4</b> per game</span>
+    <span><b>60–90</b> minutes</span>
+    <span><b>Solo</b> vs AI bots</span>
+    <span><b>Pass-and-play</b> on one phone</span>
+    <span><b>30 VP</b> to win</span>
+  </div>
+</header>
+
+<section class="block" aria-labelledby="changes-h">
+  <div class="block-head">
+    <p class="cap">Since draft 1</p>
+    <h2 id="changes-h">What changed</h2>
+    <p>Your four answers, then every inconsistency I found by checking each rule against all the others.</p>
+  </div>
+  <ul class="answers">
+    <li><b>Four new factions:</b> Sea Turtles, Starfish, Lionfish and Remoras join the original ten.</li>
+    <li><b>Simpler names:</b> the game is Reef Wars, each faction is named after its animal, the turn is Dawn, Day and Dusk, and every reef has a one- or two-word name.</li>
+    <li><b>Octopus and Cuttlefish</b> keep their depth. They lose side rules that had nothing to do with their core idea.</li>
+    <li><b>First playable pair: Sharks against Coral.</b> They're the simplest attacker and the simplest builder, and together they use moving, battles, building, crafting and cards, which is most of the engine.</li>
+  </ul>
+  <h3 class="sub">Shared rules that were inconsistent</h3>
+  <ul class="changes">%%CHANGES_SHARED%%</ul>
+  <h3 class="sub">Factions that were inconsistent or doing too much</h3>
+  <ul class="changes">%%CHANGES_FACTIONS%%</ul>
+  <h3 class="sub">Rules every faction now follows</h3>
+  <ul class="principles">%%PRINCIPLES%%</ul>
+</section>
+
+<section class="block" aria-labelledby="rules-h">
+  <div class="block-head">
+    <p class="cap">Shared rules</p>
+    <h2 id="rules-h">How the reef works</h2>
+    <p>Root players will recognize most of this. The rules tagged <span class="new" style="margin-left:0">reef</span> are new, and several factions are built around them.</p>
+  </div>
+  <figure class="map" aria-labelledby="map-cap">
+    <div class="map-scroll">%%MAP%%</div>
+    <figcaption id="map-cap">
+      <span class="key"><i class="sw k"></i>Kelp</span>
+      <span class="key"><i class="sw s"></i>Sponge</span>
+      <span class="key"><i class="sw p"></i>Pearl</span>
+      <span class="key"><i class="sw m"></i>Moon (wild, cards only)</span>
+      <span class="key"><i class="sw cur"></i>Current, one-way</span>
+      <span class="key"><i class="sw gate"></i>Gate to the open ocean</span>
+      <span class="key"><i class="sw nook"></i>Building slot</span>
+      <span class="key"><i class="sw band sh"></i>Shore</span>
+      <span class="key"><i class="sw band tr"></i>Trench, below the rim reefs</span>
+    </figcaption>
+  </figure>
+  <div class="rules">%%RULES%%</div>
+</section>
+
+<section class="block" aria-labelledby="glance-h">
+  <div class="block-head">
+    <p class="cap">At a glance</p>
+    <h2 id="glance-h">What each faction does, and never does</h2>
+    <p>Plates run from easiest to learn to hardest. A dot means the faction does it; a dash means it never does. <b>Move</b>: moves its warriors from reef to reef by choice. <b>Battle</b>: starts dice battles. <b>Build</b>: places buildings. <b>Recruit</b>: puts warriors from its supply onto the map, by any means. <b>Craft</b>: only buildings craft, so only builders craft.</p>
+  </div>
+  %%GLANCE%%
+</section>
+
+<section class="block" aria-labelledby="plates-h">
+  <div class="block-head">
+    <p class="cap">Specimen plates</p>
+    <h2 id="plates-h">The factions in detail</h2>
+    <p>Complexity runs from one to four dots. Reach is how much pressure a faction puts on the others. Each plate's Hurts and Hurt by lines come from the same list, so they always match.</p>
+  </div>
+  <div class="plates">%%PLATES%%</div>
+</section>
+
+<section class="block" aria-labelledby="line-h">
+  <div class="block-head">
+    <p class="cap">Lineups</p>
+    <h2 id="line-h">Suggested games</h2>
+    <p>A lineup needs a total reach of at least 12 for two factions, 15 for three and 18 for four, or nobody pushes and the reef goes quiet. The app suggests lineups and warns you before a low one.</p>
+  </div>
+  <div class="lineups">%%LINEUPS%%</div>
+</section>
+
+<section class="block" aria-labelledby="build-h">
+  <div class="block-head">
+    <p class="cap">The app</p>
+    <h2 id="build-h">On the phone, and how I'll build it</h2>
+  </div>
+  <div class="two">
+    <ul class="plain">
+      <li><b>Solo against bots.</b> Pick your faction and the rest are AI. Each faction gets its own bot that plays by its three rules.</li>
+      <li><b>Pass-and-play.</b> One phone, handed around. A cover screen hides your hand while the phone changes hands.</li>
+      <li><b>Save anywhere.</b> The game saves after every action, so a 90-minute game can be finished over several sittings.</li>
+      <li><b>Landscape board</b> with pinch to zoom. Your faction board and hand slide up from the bottom.</li>
+      <li><b>Rules at hand.</b> Tap any piece or card to see the rule behind it.</li>
+      <li><b>Installs like Voice Music.</b> A native Kotlin app, built on GitHub and downloaded to your phone from a release link.</li>
+    </ul>
+    <ol class="phases">%%PHASES%%</ol>
+  </div>
+</section>
+
+<section class="block" aria-labelledby="ask-h">
+  <div class="ask">
+    <p class="cap">Next</p>
+    <h2 id="ask-h" style="font-size:var(--s-h3)">Ready for phase 1</h2>
+    <p>If these plates read right to you, I start building the engine with Sharks and Coral. If a rule still reads wrong, tell me the plate and the rule.</p>
+  </div>
+</section>
+
+</div>
