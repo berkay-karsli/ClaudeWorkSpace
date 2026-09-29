@@ -38,14 +38,15 @@ English words work best.
 
 ## How a song is started
 
-1. If YouTube Music's player is running (playing or paused), the app asks it directly to
-   "play from search" — the same request Android Auto sends. The top result starts playing.
-2. If it isn't running, the app presses a virtual "play" media button to wake it (Android sends
-   this to the last music app you used), then asks it for the song.
-3. After 3.5 s it checks that a new song is actually playing and says its title and artist.
-   If not, it opens YouTube Music's search for the song instead and tells you.
+YouTube Music ignores "play this search" requests from apps other than Google's (it only fills in
+its search box), so the app does the search itself:
 
-Tip: play something in YouTube Music once before driving, so it's the last music app used.
+1. It looks up the top **song** result for what you said, using the same search the
+   music.youtube.com website uses (no account or API key needed).
+2. It opens that song's link (`music.youtube.com/watch?v=…`) in YouTube Music, which starts playing
+   it right away.
+3. Once the song is playing it reads out the real title and artist, so you'll know if it picked the
+   wrong one. If the lookup fails (e.g. no signal), it opens YouTube Music's search instead.
 
 ## How it works
 
@@ -76,11 +77,10 @@ Tap each button in the **Setup** list:
 
 1. **Allow microphone** – required.
 2. **Download voice model** – ~40 MB, one time, for offline wake-phrase detection.
-3. **Allow notification access** – **required for songs to start by themselves.** Songs are started
-   through YouTube Music's player (the way Android Auto does it), and Android only gives apps
-   access to other apps' players through this permission. The app doesn't read your notifications.
-4. **Allow display over other apps** – needed for "open YouTube Music", and for the fallback
-   that opens YouTube Music's search if a song can't be started directly.
+3. **Allow notification access** – lets the app control YouTube Music's playback (next, pause…)
+   and read out the title of the song that started. The app doesn't read your notifications.
+4. **Allow display over other apps** – **required for playing songs by name.** Android blocks
+   background apps from opening a song in another app unless this is on.
 5. **Allow notifications** – so you can see the "listening" notification with its Stop button.
 
 Then tap **Start listening**. Use the "Try a command without speaking" box to test commands.

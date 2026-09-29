@@ -106,8 +106,8 @@ class MainActivity : Activity() {
         if (!downloading) {
             setStep(modelButton, modelOk, "Download voice model (~40 MB)", "Voice model ready")
         }
-        setStep(notificationAccessButton, accessOk, "Allow notification access (needed to start songs)", "Notification access allowed")
-        setStep(overlayButton, overlayOk, "Allow display over other apps (to open YouTube Music)", "Can open YouTube Music")
+        setStep(notificationAccessButton, accessOk, "Allow notification access (to control playback and announce songs)", "Notification access allowed")
+        setStep(overlayButton, overlayOk, "Allow display over other apps (needed to start songs)", "Can open YouTube Music")
         setStep(notificationsButton, notificationsOk, "Allow notifications (optional)", "Notifications allowed")
 
         val running = VoiceControlService.isRunning

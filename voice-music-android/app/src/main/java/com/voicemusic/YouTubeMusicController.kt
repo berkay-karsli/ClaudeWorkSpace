@@ -11,13 +11,13 @@ import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.net.Uri
-import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.provider.MediaStore
 import android.provider.Settings
 import android.view.KeyEvent
+import java.util.concurrent.Executors
 
 /** Carries out [Command]s against the YouTube Music app. Returns a short message describing the outcome. */
 class YouTubeMusicController(private val context: Context) {
@@ -91,9 +91,9 @@ class YouTubeMusicController(private val context: Context) {
     /**
      * Plays [query] and reports the outcome through [onResult] (on the main thread).
      *
-     * YouTube Music's "play from search" intent only fills in its search box, so songs are started
-     * through its media session instead, the way Android Auto does. If YouTube Music isn't running,
-     * a "play" media button wakes its player first. The search intent is only a last resort.
+     * YouTube Music ignores "play from search" requests from apps other than Google's and only
+     * fills in its search box, so this looks up the top song itself and opens that song's link,
+     * which YouTube Music starts playing right away.
      */
     fun play(query: String, onResult: (String) -> Unit) {
         if (!isInstalled()) {
@@ -101,64 +101,59 @@ class YouTubeMusicController(private val context: Context) {
             onResult("YouTube Music is not installed")
             return
         }
-        if (!MediaNotificationListener.isEnabled(context)) {
-            onResult(openSearch(query, "Allow notification access so songs start by themselves"))
-            return
-        }
-        val session = session()
-        if (session != null) {
-            playFromSession(session, query, onResult)
-            return
-        }
-        // Wake YouTube Music's player (it's normally the app that last played music), then wait for its session.
-        pressMediaKey(KeyEvent.KEYCODE_MEDIA_PLAY)
-        waitForSession(SESSION_WAIT_MS) { woken ->
-            if (woken != null) {
-                // Give the player a moment to finish starting before asking it for the song.
-                handler.postDelayed({ playFromSession(woken, query, onResult) }, 1_000)
-            } else {
-                onResult(openSearch(query, "Couldn't start YouTube Music's player"))
+        lookups.execute {
+            val videoId = runCatching { YouTubeMusicSearch.findSong(query) }.getOrNull()
+            handler.post {
+                if (videoId == null) {
+                    onResult(openSearch(query, "Couldn't look up the song, check the internet connection"))
+                    return@post
+                }
+                val before = session()?.let(::trackKey)
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://music.youtube.com/watch?v=$videoId"))
+                    .setPackage(PACKAGE)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                try {
+                    context.startActivity(intent)
+                } catch (e: ActivityNotFoundException) {
+                    onResult("YouTube Music couldn't open the song")
+                    return@post
+                }
+                if (!Settings.canDrawOverlays(context)) {
+                    onResult("Allow display over other apps so songs can start while this app is in the background")
+                    return@post
+                }
+                announceWhenStarted(before, query, onResult)
             }
         }
     }
 
-    private fun playFromSession(session: MediaController, query: String, onResult: (String) -> Unit) {
-        val before = trackKey(session)
-        session.transportControls.playFromSearch(query, Bundle())
-        // Check that something new actually started; otherwise fall back to the search screen.
-        handler.postDelayed({
-            val current = session() ?: session
-            val state = current.playbackState?.state
-            val playing = state == PlaybackState.STATE_PLAYING || state == PlaybackState.STATE_BUFFERING ||
-                state == PlaybackState.STATE_CONNECTING
-            val changed = trackKey(current) != before
-            if (playing && changed) {
-                val title = current.metadata?.getString(MediaMetadata.METADATA_KEY_TITLE)
-                val artist = current.metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST)
-                onResult(if (title != null) "Playing $title" + (artist?.let { " by $it" } ?: "") else "Playing \"$query\"")
-            } else {
-                onResult(openSearch(query, "YouTube Music didn't start it"))
+    /** Waits for the new song to start so its real title and artist can be read out. */
+    private fun announceWhenStarted(before: String?, query: String, onResult: (String) -> Unit) {
+        val deadline = SystemClock.uptimeMillis() + START_WAIT_MS
+        val poll = object : Runnable {
+            override fun run() {
+                val session = session()
+                val metadata = session?.metadata
+                val state = session?.playbackState?.state
+                val started = session != null && trackKey(session) != before &&
+                    (state == PlaybackState.STATE_PLAYING || state == PlaybackState.STATE_BUFFERING)
+                when {
+                    started && metadata?.getString(MediaMetadata.METADATA_KEY_TITLE) != null -> {
+                        val title = metadata.getString(MediaMetadata.METADATA_KEY_TITLE)
+                        val artist = metadata.getString(MediaMetadata.METADATA_KEY_ARTIST)
+                        onResult("Playing $title" + (artist?.let { " by $it" } ?: ""))
+                    }
+                    // Without notification access (or if it's slow) we can't confirm; it's been opened.
+                    SystemClock.uptimeMillis() >= deadline -> onResult("Playing \"$query\"")
+                    else -> handler.postDelayed(this, 300)
+                }
             }
-        }, VERIFY_DELAY_MS)
+        }
+        handler.postDelayed(poll, 500)
     }
 
     private fun trackKey(session: MediaController): String? = session.metadata?.let {
         it.getString(MediaMetadata.METADATA_KEY_MEDIA_ID) ?: it.getString(MediaMetadata.METADATA_KEY_TITLE)
-    }
-
-    private fun waitForSession(timeoutMs: Long, onDone: (MediaController?) -> Unit) {
-        val deadline = SystemClock.uptimeMillis() + timeoutMs
-        val poll = object : Runnable {
-            override fun run() {
-                val session = session()
-                when {
-                    session != null -> onDone(session)
-                    SystemClock.uptimeMillis() >= deadline -> onDone(null)
-                    else -> handler.postDelayed(this, 250)
-                }
-            }
-        }
-        handler.post(poll)
     }
 
     /** Opens YouTube Music's search for [query]; the user has to tap the result. */
@@ -199,7 +194,7 @@ class YouTubeMusicController(private val context: Context) {
 
     companion object {
         const val PACKAGE = "com.google.android.apps.youtube.music"
-        private const val SESSION_WAIT_MS = 5_000L
-        private const val VERIFY_DELAY_MS = 3_500L
+        private const val START_WAIT_MS = 6_000L
+        private val lookups = Executors.newSingleThreadExecutor()
     }
 }
