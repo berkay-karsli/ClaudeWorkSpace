@@ -1,4 +1,4 @@
-"""Builds field-guide.html, the Reef Wars design document.
+"""Builds field-guide.html, the Reef design document.
 
 All faction rules live in FACTIONS below. The page is generated from this data, and
 check() refuses to build when the design breaks one of its own consistency rules.
@@ -30,7 +30,7 @@ FACTIONS = [
         ],
         pieces="10 sharks. 8 Blood tokens.",
         setup="3 sharks at any gate.",
-        turn=[("Dawn", "1 shark arrives at any gate."), ("Day", "3 actions: move or battle."), ("Dusk", "Feed, then any shark that stayed still drowns.")],
+        turn=[("Dawn", "1 shark arrives at any gate."), ("Day", "3 actions: hunt. A hunt moves sharks from one reef, then they may battle where they arrive."), ("Dusk", "Feed, then any shark that stayed still drowns.")],
         scores=["At Dusk, remove every Blood token in a reef with your sharks: 1 VP each."],
         note="Many sharks breathe by swimming, pushing water over their gills. For them, stopping means suffocating.",
     ),
@@ -105,13 +105,13 @@ FACTIONS = [
         verbs=dict(Move=False, Battle=False, Build=True, Recruit=True, Craft=True),
         rules=[
             ("Rooted", "Polyps never move, not even along currents."),
-            ("Spawn", "Once per turn, discard a card: each reef of its suit with your coral puts 1 polyp into every neighboring reef. With a Moon card, every reef with your coral spawns."),
+            ("Spawn", "Once per turn, discard a card: each reef of its suit with your coral puts 1 polyp into every neighboring reef. With a Moon card, every reef with your coral spawns. If you have no coral on the map, the spawn instead puts 2 polyps into one reef of the card's suit."),
             ("Living reef", "When you are battled, each of your coral in that reef counts as a warrior for the hits you can deal."),
         ],
         pieces="20 polyps. 15 coral (buildings).",
         setup="2 coral and 3 polyps in one reef that isn't a gate, and 1 polyp in each neighboring reef.",
-        turn=[("Dawn", "Nothing."), ("Day", "3 actions: grow (discard a card of the reef's suit to build a coral in an empty slot of a reef you rule) or spawn."), ("Dusk", "Draw 1 extra card per 4 coral on the map.")],
-        scores=["Each coral scores when grown: 1, 1, 2, 2, 3, 3, 4, 4, 5 and so on.", "Gear crafted by your coral."],
+        turn=[("Dawn", "Nothing."), ("Day", "3 actions: grow (discard a card of the reef's suit to build a coral in an empty slot of a reef you rule) or spawn."), ("Dusk", "Draw 1 extra card per 5 coral on the map.")],
+        scores=["Each coral scores when grown: 1, 1, 1, 2, 2, 2, 3 and so on.", "Gear crafted by your coral."],
         note="Many corals spawn on the same one or two nights a year, timed by the moon. That is why a Moon card makes every reef spawn.",
     ),
     dict(
@@ -657,7 +657,24 @@ def build(path):
     Path(path).write_text(html, encoding="utf-8")
 
 
+def export_plates(path):
+    """Writes the plate text the app shows in its rules screen, so the app and this page can't drift apart."""
+    import json
+    strip = lambda t: re.sub(r"</?i>", "", t)
+    plates = [
+        dict(key=f["key"], name=f["name"], role=f["role"], tagline=f["tagline"], idea=f["idea"],
+             rules=[dict(title=t, text=strip(d)) for t, d in f["rules"]],
+             pieces=f["pieces"], setup=f["setup"],
+             turn=[dict(phase=ph, text=strip(d)) for ph, d in f["turn"]],
+             scores=f["scores"], verbs=f["verbs"], complexity=f["complexity"], reach=f["reach"])
+        for f in FACTIONS
+    ]
+    Path(path).write_text(json.dumps(dict(plates=plates, shared=[dict(title=t, text=re.sub(r"</?b>", "", d)) for t, d, _ in SHARED_RULES]), indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
 TEMPLATE = Path(__file__).with_name("field_guide_template.html").read_text(encoding="utf-8")
 
 if __name__ == "__main__":
-    build(sys.argv[1] if len(sys.argv) > 1 else Path(__file__).with_name("field-guide.html"))
+    here = Path(__file__).parent
+    build(sys.argv[1] if len(sys.argv) > 1 else here / "field-guide.html")
+    export_plates(here.parent / "engine" / "src" / "main" / "resources" / "plates.json")
