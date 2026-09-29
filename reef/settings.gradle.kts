@@ -26,3 +26,5 @@ rootProject.name = "Reef"
 include(":engine")
 // -PengineOnly skips the Android app, for machines without access to Google's Maven repository.
 if (!providers.gradleProperty("engineOnly").isPresent) include(":app")
+// -PdesktopCheck type-checks the app's Compose UI against Compose Desktop (Maven Central only).
+if (providers.gradleProperty("desktopCheck").isPresent) include(":desktopcheck")

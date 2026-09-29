@@ -1,0 +1,60 @@
+name: Reef Android
+
+on:
+  push:
+    paths:
+      - "reef/**"
+      - ".github/workflows/reef-android.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: reef
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      # The design page and the rules text inside the app are both generated from one data file.
+      # Fail if either was edited by hand or not regenerated.
+      - name: Check the design and the app's rules text agree
+        run: |
+          python3 docs/build_field_guide.py
+          git diff --exit-code -- docs/field-guide.html engine/src/main/resources/plates.json
+      - name: Test the engine and build the APK
+        run: |
+          ./gradlew :engine:test :app:assembleDebug
+          cp app/build/outputs/apk/debug/app-debug.apk Reef.apk
+      - name: Render screenshots
+        run: |
+          ./gradlew :desktopcheck:screenshots -PdesktopCheck -PscreensDir="$PWD/screens"
+          cd screens && zip -q ../ReefScreens.zip *.png
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Reef-apk
+          path: |
+            reef/Reef.apk
+            reef/ReefScreens.zip
+      # A plain .apk download link that works on a phone without logging in.
+      - name: Publish to the "reef-latest" release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: reef-latest
+          target_commitish: ${{ github.sha }}
+          name: Reef (latest build)
+          body: |
+            Latest build of Reef from `${{ github.ref_name }}` (${{ github.sha }}).
+            On your phone, tap **Reef.apk** below to download and install it.
+            ReefScreens.zip has screenshots of this build, rendered without a phone.
+          files: |
+            reef/Reef.apk
+            reef/ReefScreens.zip
+          make_latest: false
