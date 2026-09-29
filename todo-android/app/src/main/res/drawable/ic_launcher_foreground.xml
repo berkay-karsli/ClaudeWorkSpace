@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Card -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M39,30h30a7,7 0 0 1 7,7v34a7,7 0 0 1 -7,7h-30a7,7 0 0 1 -7,-7v-34a7,7 0 0 1 7,-7z" />
+    <!-- Row 1: home (coral) -->
+    <path
+        android:pathData="M39,44l4,4l8,-8"
+        android:strokeColor="#E0674E"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M57,45h12"
+        android:strokeColor="#F6C3B6"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round" />
+    <!-- Row 2: university (indigo) -->
+    <path
+        android:pathData="M39,60l4,4l8,-8"
+        android:strokeColor="#5563E8"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M57,61h12"
+        android:strokeColor="#C6CBF6"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round" />
+</vector>
