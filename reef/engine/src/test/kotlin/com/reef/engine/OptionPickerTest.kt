@@ -63,6 +63,7 @@ class OptionPickerTest {
                 is Step.ChooseReef -> pick = pick.copy(reefs = pick.reefs + target.reefs[s.index])
                 is Step.ChooseCard -> pick = pick.copy(card = target.card)
                 is Step.ChooseTarget -> pick = pick.copy(target = target.target, targetChosen = true)
+                is Step.ChooseVariant -> pick = pick.copy(variant = target.variant)
                 is Step.ChooseCount -> pick = pick.copy(count = target.count)
                 is Step.Confirm -> return s.option
             }

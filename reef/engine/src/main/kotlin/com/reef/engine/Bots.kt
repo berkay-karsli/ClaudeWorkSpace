@@ -5,7 +5,7 @@ import kotlin.random.Random
 /**
  * Bots look one choice ahead: they try every option on a copy of the game, score the result from
  * their own point of view, and take the best. Choices that roll dice are tried several times and
- * averaged. Each faction has its own sense of a good position in [factionValue].
+ * averaged. Each faction has its own sense of a good position in [FactionRules.value].
  */
 class Bot(private val random: Random = Random.Default, private val samples: Int = 4) {
 
@@ -21,6 +21,9 @@ class Bot(private val random: Random = Random.Default, private val samples: Int 
                 val copy = g.deepCopy()
                 if (o.random) copy.rng = g.rng + 7919L * (i + 1)
                 Game.apply(copy, o)
+                defendPlainly(copy, d.player)
+                payUp(copy, d.player)
+                endDay(copy, d.player)
                 total += evaluate(copy, d.player)
             }
             // A little noise breaks ties, so bots don't always make the same opening.
@@ -31,6 +34,35 @@ class Bot(private val random: Random = Random.Default, private val samples: Int 
             }
         }
         return best
+    }
+
+    /**
+     * Ending the Day brings the Dusk (scoring, a card), so an action is judged as "do this, then
+     * end the Day". Otherwise ending the Day would always look better than any single action.
+     */
+    private fun endDay(g: GameState, p: Int) {
+        if (g.phase != Phase.DAY || g.current != p || g.pending.isNotEmpty()) return
+        val d = Game.decision(g) ?: return
+        if (EndDay in d.options) Game.apply(g, EndDay)
+    }
+
+    /** An attack is judged by how it turns out, assuming the defender fights without an ambush. */
+    private fun defendPlainly(g: GameState, p: Int) {
+        while (true) {
+            val pending = g.pending.lastOrNull() as? DefendPending ?: return
+            if (pending.player == p) return
+            Game.apply(g, NoAmbush)
+        }
+    }
+
+    /** A shell bought is only worth judging once it is paid for: pay with the least useful cards. */
+    private fun payUp(g: GameState, p: Int) {
+        while (true) {
+            val pending = g.pending.lastOrNull() as? PayPending ?: return
+            if (pending.player != p) return
+            val card = g.players[p].hand.minBy { Cards[it].vp + (if (Cards[it].kind == CardKind.AMBUSH) 3 else 0) + (if (Cards[it].suit == Suit.MOON) 2 else 0) }
+            Game.apply(g, PayCard(card))
+        }
     }
 
     /**
@@ -72,9 +104,13 @@ class Bot(private val random: Random = Random.Default, private val samples: Int 
                 val reefs = if (suit == Suit.MOON) Board.oppositeGates.flatMap { listOf(it.first, it.second) } else g.reefs.indices.filter { g.suitOf(it) == suit }
                 v += reefs.sumOf { reef -> if (Game.ruledBy(g, reef, p)) 25.0 + minOf(margin(g, p, reef), 6) * 3.0 else 0.0 }
             }
-            v += when (pl.faction) {
-                FactionId.SHARKS -> sharks(g, p, self)
-                FactionId.CORAL -> coral(g, p)
+            v += Game.rules(pl.faction).value(g, p, self)
+            // Shells from the Hermit Crabs guard pieces that are under threat.
+            g.state<CrabsState>(FactionId.CRABS)?.let { s ->
+                for ((reef, m) in s.shells) {
+                    val n = m[pl.faction] ?: 0
+                    if (n > 0) v += n * 1.0 + minOf(n, Eval.threat(g, p, reef)) * 2.5
+                }
             }
             return v
         }
@@ -91,72 +127,6 @@ class Bot(private val random: Random = Random.Default, private val samples: Int 
             } else {
                 g.reefs.indices.filter { g.suitOf(it) == suit && Game.ruledBy(g, it, p) }.sortedByDescending { margin(g, p, it) }.take(3).takeIf { it.size == 3 }
             }
-        }
-
-        private fun sharks(g: GameState, p: Int, self: Boolean): Double {
-            val s = g.players[p].fs as SharksState
-            val f = FactionId.SHARKS
-            var v = 0.0
-            val onMap = g.reefs.sumOf { it.warriors(f) }
-            v += onMap * 9.0 + s.supply * 2.0
-            if (self && g.current == p && g.phase == Phase.DAY) v -= (onMap - s.moved.values.sum()) * 8.0
-            for (reef in g.reefs.indices) {
-                val rs = g.reefs[reef]
-                val here = rs.warriors(f)
-                val reach = g.reefs.indices.any { g.reefs[it].warriors(f) > 0 && Board.distance(it, reef) <= 1 }
-                if (rs.has(PieceType.BLOOD)) {
-                    v += when {
-                        here > 0 -> 7.0
-                        g.reefs.indices.any { g.reefs[it].warriors(f) > 0 && Board.distance(it, reef) <= 2 } -> 2.5
-                        else -> 0.0
-                    }
-                }
-                // Buildings within reach are points waiting to be taken.
-                if (reach) v += g.players.indices.filter { it != p }.sumOf { g.reefs[reef].buildingsOf(g.players[it].faction) } * 0.8
-            }
-            for (c in g.players[p].hand) v += if (Cards[c].kind == CardKind.DOMINANCE) 0.5 else 1.5
-            return v
-        }
-
-        private fun coral(g: GameState, p: Int): Double {
-            val f = FactionId.CORAL
-            var v = 0.0
-            val growable = mutableSetOf<Suit>()
-            val spawnable = mutableSetOf<Suit>()
-            for (reef in g.reefs.indices) {
-                val rs = g.reefs[reef]
-                val coral = rs.buildingsOf(f)
-                v += coral * 5.0 + rs.warriors(f) * 1.5
-                if (coral > 0) spawnable += g.suitOf(reef)
-                if (Game.ruledBy(g, reef, p)) {
-                    v += 2.0
-                    if (Game.freeSlots(g, reef) > 0) {
-                        v += 2.0
-                        growable += g.suitOf(reef)
-                    }
-                }
-                // Coral that enemies can reach is coral at risk.
-                if (coral > 0) {
-                    val threat = g.players.indices.filter { it != p }.sumOf { q ->
-                        val fq = g.players[q].faction
-                        rs.warriors(fq) + Board.neighbors(reef).sumOf { g.reefs[it].warriors(fq) } / 2
-                    }
-                    v -= minOf(threat, coral) * 1.5
-                }
-            }
-            if (spawnable.isEmpty()) spawnable += Suit.entries
-            for (c in g.players[p].hand) {
-                val card = Cards[c]
-                v += when {
-                    card.kind == CardKind.DOMINANCE -> 0.5
-                    card.suit == Suit.MOON -> 3.5
-                    card.suit in growable -> 3.0
-                    card.suit in spawnable -> 2.5
-                    else -> 1.5
-                }
-                if (card.kind == CardKind.GEAR) v += card.vp * 0.5
-            }
-            return v
         }
     }
 }

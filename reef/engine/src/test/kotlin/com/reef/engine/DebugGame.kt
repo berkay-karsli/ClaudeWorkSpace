@@ -2,15 +2,16 @@ package com.reef.engine
 
 import kotlin.random.Random
 
-/** Replays one bot game and prints its log; run with -Dreef.debugSeed=N. Not a test. */
+/** Replays one bot game and prints its log: `debugGame -Pseed=N -Plineup=sharks,coral`. Not a test. */
 object DebugGame {
     @JvmStatic
     fun main(args: Array<String>) {
-        val seed = args.firstOrNull()?.toLong() ?: 1007L
-        val seats = listOf(Seat(FactionId.SHARKS, false), Seat(FactionId.CORAL, false)).let { if (seed % 2 == 0L) it else it.reversed() }
-        val g = Game.newGame(seats, seed)
+        val seed = args.getOrNull(0)?.toLong() ?: 2000L
+        val lineup = args.getOrNull(1)?.split(",")?.map { k -> FactionId.entries.first { it.key == k.trim() } }
+            ?: SimulationTest.lineups(1, 7).first()
+        val g = Game.newGame(lineup.map { Seat(it, false) }, seed)
         val bot = Bot(Random(seed), samples = 2)
-        while (g.phase != Phase.OVER && g.round <= 25) Game.apply(g, bot.choose(g, Game.decision(g)!!))
+        while (g.phase != Phase.OVER && g.round <= 45) Game.apply(g, bot.choose(g, Game.decision(g)!!))
         println(g.log.joinToString("\n"))
     }
 }

@@ -219,6 +219,9 @@ private fun StepControls(controller: GameController, d: Decision, step: Step, ma
                     }
                 }
             }
+            is Step.ChooseVariant -> FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                for (v in step.variants) Chip(v) { controller.pick = pick.copy(variant = v) }
+            }
             is Step.ChooseCount -> {
                 Text("How many?", color = Reef.muted, fontSize = 13.sp)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {

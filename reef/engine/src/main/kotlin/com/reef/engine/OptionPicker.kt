@@ -2,8 +2,9 @@ package com.reef.engine
 
 /**
  * Turns a flat list of options into small steps a person can take on a phone: choose what to do,
- * tap reefs on the map in order, pick a card, a target, then a number. Works the same for every
- * faction, because it only looks at the fields every [Option] shares.
+ * tap reefs on the map in order, pick a card, a target, a variant (which arm, which lure offer),
+ * then a number. Works the same for every faction, because it only looks at the fields every
+ * [Option] shares.
  */
 object OptionPicker {
 
@@ -14,6 +15,7 @@ object OptionPicker {
         val card: Int? = null,
         val target: FactionId? = null,
         val targetChosen: Boolean = false,
+        val variant: String? = null,
         val count: Int? = null,
     )
 
@@ -22,6 +24,7 @@ object OptionPicker {
         data class ChooseReef(val reefs: Set<Int>, val index: Int) : Step()
         data class ChooseCard(val cards: Set<Int>) : Step()
         data class ChooseTarget(val targets: List<FactionId?>) : Step()
+        data class ChooseVariant(val variants: List<String>) : Step()
         data class ChooseCount(val counts: List<Int>) : Step()
         data class Confirm(val option: Option) : Step()
     }
@@ -33,6 +36,7 @@ object OptionPicker {
             pick.reefs.indices.all { o.reefs.getOrNull(it) == pick.reefs[it] } &&
             (pick.card == null || o.card == pick.card) &&
             (!pick.targetChosen || o.target == pick.target) &&
+            (pick.variant == null || o.variant == pick.variant) &&
             (pick.count == null || o.count == pick.count)
     }
 
@@ -51,6 +55,10 @@ object OptionPicker {
         if (!p.targetChosen) {
             val targets = m.map { it.target }.distinct()
             if (targets.size > 1) return Step.ChooseTarget(targets.sortedBy { it?.ordinal ?: -1 })
+        }
+        if (p.variant == null) {
+            val variants = m.mapNotNull { it.variant }.distinct()
+            if (variants.size > 1) return Step.ChooseVariant(variants)
         }
         if (p.count == null) {
             val counts = m.mapNotNull { it.count }.distinct().sortedDescending()

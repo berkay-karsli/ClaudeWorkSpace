@@ -20,6 +20,7 @@ dependencies {
 }
 
 tasks.test {
+    providers.gradleProperty("games").orNull?.let { systemProperty("reef.games", it) }
     testLogging {
         showStandardStreams = true
         events("failed")
@@ -29,6 +30,6 @@ tasks.test {
 
 tasks.register<JavaExec>("debugGame") {
     classpath = sourceSets["test"].runtimeClasspath
-    mainClass.set("com.reef.engine.DebugGame")
-    args(providers.gradleProperty("seed").getOrElse("1007"))
+    mainClass.set(providers.gradleProperty("main").getOrElse("com.reef.engine.DebugGame"))
+    args(listOfNotNull(providers.gradleProperty("seed").getOrElse("2000"), providers.gradleProperty("lineup").orNull))
 }

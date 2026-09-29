@@ -2,7 +2,6 @@ package com.reef.engine
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -60,7 +59,7 @@ class RulesTest {
         assertEquals(3, g.reefs[5].warriors(coral))
         for (n in Board.neighbors(5)) assertEquals(1, g.reefs[n].warriors(coral))
         assertEquals(Phase.DAWN, g.phase)
-        assertEquals(Board.gates.map { Arrive(it) }, Game.decision(g)!!.options)
+        assertEquals(Board.gates.map { Arrive(it, 1, "shark") }, Game.decision(g)!!.options)
     }
 
     @Test
@@ -78,7 +77,7 @@ class RulesTest {
     @Test
     fun sharksThatDontMoveDrown() {
         val g = started()
-        Game.apply(g, Arrive(3))
+        Game.apply(g, Arrive(3, 1, "shark"))
         val moveOne = Game.decision(g)!!.options.filterIsInstance<Hunt>().first { it.from == 0 && it.n == 2 && it.to == 1 && it.prey == null }
         Game.apply(g, moveOne)
         // End the Day: 1 shark left at Gull Rock and the new one at Shipwreck never moved.
@@ -92,7 +91,7 @@ class RulesTest {
     @Test
     fun battleCapsHitsAndBloodScoresAtDusk() {
         val g = started(seed = 3)
-        Game.apply(g, Arrive(0))
+        Game.apply(g, Arrive(0, 1, "shark"))
         // Four sharks hunt into Garden, where Coral has one polyp.
         val c = g.player(coral)
         g.players[c].hand.removeAll { Cards[it].kind == CardKind.AMBUSH }
@@ -101,7 +100,7 @@ class RulesTest {
         assertTrue("an attack that removes a warrior leaves Blood", g.reefs[4].has(PieceType.BLOOD))
         val vpBefore = g.players[g.player(sharks)].vp
         Game.apply(g, EndDay)
-        assertEquals(vpBefore + 1, g.players[g.player(sharks)].vp)
+        assertEquals(vpBefore + SharksRules.BLOOD_VP, g.players[g.player(sharks)].vp)
         assertFalse(g.reefs[4].has(PieceType.BLOOD))
         assertEquals(GameState.BLOOD_TOKENS, g.blood)
     }
@@ -116,7 +115,7 @@ class RulesTest {
         (g.players[c].fs as CoralState).polyps += 3
         g.reefs[1].addWarriors(sharks, 1)
         g.sharkState().supply -= 1
-        Game.apply(g, Arrive(0))
+        Game.apply(g, Arrive(0, 1, "shark"))
         val vp = g.players[g.player(sharks)].vp
         Game.apply(g, Hunt(1, 5, 1, scent = false, prey = coral))
         val destroyed = 2 - g.reefs[5].buildingsOf(coral)
@@ -139,14 +138,14 @@ class RulesTest {
         val ambush = Cards.all.first { it.kind == CardKind.AMBUSH && it.suit == Suit.MOON }.id
         g.drawPile.remove(ambush); g.discard.remove(ambush); g.players.forEach { it.hand.remove(ambush) }
         g.players[c].hand.add(ambush)
-        Game.apply(g, Arrive(0))
+        Game.apply(g, Arrive(0, 1, "shark"))
         Game.apply(g, Hunt(0, 4, 4, scent = false, prey = coral))
         val d = Game.decision(g)!!
         assertEquals(c, d.player)
         assertTrue(PlayAmbush(ambush) in d.options)
         Game.apply(g, PlayAmbush(ambush))
         assertEquals(2, g.reefs[4].warriors(sharks))
-        assertNull(g.battle)
+        assertTrue(g.pending.isEmpty())
     }
 
     @Test
@@ -157,7 +156,7 @@ class RulesTest {
     @Test
     fun spawnPutsPolypsNextToMatchingCoral() {
         val g = started()
-        Game.apply(g, Arrive(0))
+        Game.apply(g, Arrive(0, 1, "shark"))
         // Pass the Sharks' turn by moving every shark, then end the Day.
         Game.apply(g, Hunt(0, 1, 4, scent = false, prey = null))
         Game.apply(g, EndDay)

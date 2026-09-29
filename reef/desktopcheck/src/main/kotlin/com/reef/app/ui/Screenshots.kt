@@ -65,7 +65,7 @@ fun main(args: Array<String>) {
     val setup = Game.newGame(listOf(Seat(FactionId.SHARKS, true), Seat(FactionId.CORAL, false)), 42)
     shot(out, "3-sharks-set-up") { GameScreen(GameController(setup, MemoryStore), {}, {}) }
 
-    val sharksDay = playUntil(7) { it.round >= 4 && it.phase == Phase.DAY && it.current == it.player(FactionId.SHARKS) && it.battle == null }
+    val sharksDay = playUntil(7) { it.round >= 4 && it.phase == Phase.DAY && it.current == it.player(FactionId.SHARKS) && it.pending.isEmpty() }
     if (sharksDay != null) {
         shot(out, "4-sharks-day") { GameScreen(GameController(sharksDay, MemoryStore), {}, {}) }
 
@@ -80,7 +80,7 @@ fun main(args: Array<String>) {
     }
 
     val coralDay = playUntil(11) {
-        it.round >= 3 && it.phase == Phase.DAY && it.battle == null && it.current == it.player(FactionId.CORAL) &&
+        it.round >= 3 && it.phase == Phase.DAY && it.pending.isEmpty() && it.current == it.player(FactionId.CORAL) &&
             Game.decision(it)!!.options.any { o -> o.kind == "Grow" }
     }
     if (coralDay != null) {

@@ -29,7 +29,19 @@ object Reef {
 
     fun faction(f: FactionId): Color = when (f) {
         FactionId.SHARKS -> Color(0xFF8DB3C4)
+        FactionId.SARDINES -> Color(0xFFC0CCDA)
+        FactionId.LIONFISH -> Color(0xFFF08A5D)
+        FactionId.STARFISH -> Color(0xFFEC8BBD)
         FactionId.CORAL -> Color(0xFFFF939A)
+        FactionId.JELLYFISH -> Color(0xFFC29BE9)
+        FactionId.PARROTFISH -> Color(0xFF4FD0BD)
+        FactionId.TURTLES -> Color(0xFFCFC85A)
+        FactionId.SNAKE -> Color(0xFF6CCBEF)
+        FactionId.REMORAS -> Color(0xFFBDB3A2)
+        FactionId.CRABS -> Color(0xFFEAA25E)
+        FactionId.ANGLERS -> Color(0xFFA2A7F3)
+        FactionId.OCTOPUS -> Color(0xFFF07487)
+        FactionId.CUTTLEFISH -> Color(0xFFF08AC6)
     }
 }
 

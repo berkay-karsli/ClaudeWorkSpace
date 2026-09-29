@@ -174,6 +174,9 @@ svg .gyre-label { font-family: var(--display); font-style: italic; font-size: 17
 .glance svg.mini { width: 26px; height: 26px; flex: none; }
 .glance .v { text-align: center; width: 4.6em; }
 .glance .by { color: var(--muted); }
+.glance.soft { min-width: 720px; }
+.glance.soft td { vertical-align: top; color: var(--ink); }
+.glance.soft th[scope="row"] { vertical-align: top; }
 .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--ink); }
 .dash { display: inline-block; width: 10px; height: 2px; background: var(--line); vertical-align: middle; }
 
@@ -267,7 +270,7 @@ ol.phases li::before { content: counter(ph); font-family: var(--display); font-s
 <div class="wrap">
 
 <header class="hero">
-  <p class="cap">Design draft 2 · phase 1 in progress</p>
+  <p class="cap">Design draft 3 · softlock review · all factions in progress</p>
   <h1><em>Reef</em></h1>
   <p class="lede">An asymmetric strategy game for Android, built on Root's bones and set on a coral reef. %%COUNT%% factions fight over twelve reefs, and each one is built around a single idea.</p>
   <div class="facts">
@@ -279,6 +282,15 @@ ol.phases li::before { content: counter(ph); font-family: var(--display); font-s
     <span><b>30 VP</b> to win</span>
   </div>
 </header>
+
+<section class="block" aria-labelledby="soft-h">
+  <div class="block-head">
+    <p class="cap">Draft 3</p>
+    <h2 id="soft-h">Softlock review</h2>
+    <p>Every faction checked for ways it could be wiped out or left with nothing useful to do. Each fix is written into that faction's plate below, and bot games play every lineup to catch anything missed.</p>
+  </div>
+  %%SOFTLOCKS%%
+</section>
 
 <section class="block" aria-labelledby="changes-h">
   <div class="block-head">

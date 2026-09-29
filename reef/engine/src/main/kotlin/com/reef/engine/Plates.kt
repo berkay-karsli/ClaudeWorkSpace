@@ -41,7 +41,5 @@ object Plates {
 
     val shared: List<Titled> get() = file.shared
 
-    private val keys = mapOf(FactionId.SHARKS to "sharks", FactionId.CORAL to "coral")
-
-    fun of(f: FactionId): Plate = file.plates.first { it.key == keys.getValue(f) }
+    fun of(f: FactionId): Plate = file.plates.first { it.key == f.key }
 }

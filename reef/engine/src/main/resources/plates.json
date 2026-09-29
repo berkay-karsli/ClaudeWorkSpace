@@ -25,7 +25,7 @@
    "turn": [
     {
      "phase": "Dawn",
-     "text": "1 shark arrives at any gate."
+     "text": "Sharks arrive at one gate: 1, plus 1 for each Blood token on the map, up to 3."
     },
     {
      "phase": "Day",
@@ -37,7 +37,7 @@
     }
    ],
    "scores": [
-    "At Dusk, remove every Blood token in a reef with your sharks: 1 VP each."
+    "At Dusk, remove every Blood token in a reef with your sharks: 2 VP each."
    ],
    "verbs": {
     "Move": true,
@@ -86,7 +86,7 @@
     }
    ],
    "scores": [
-    "At Dusk, sardines on a gate they didn't come in by may leave: 1–3 fish score 1 VP, 4–6 score 2, 7–9 score 3, 10 or more score 5. They go back to your supply."
+    "At Dusk, sardines on a gate they didn't come in by may leave: 1–3 fish score 1 VP, 4–6 score 2, 7–9 score 4, 10 or more score 6. They go back to your supply."
    ],
    "verbs": {
     "Move": true,
@@ -107,7 +107,7 @@
    "rules": [
     {
      "title": "Breed",
-     "text": "At Dusk, add 1 lionfish to each reef where you have 2 or more."
+     "text": "At Dusk, add 1 lionfish to each reef where you have 2 or more. At Dawn, if you have fewer than 2 lionfish on the map, 2 more arrive at any gate."
     },
     {
      "title": "Gorge",
@@ -123,7 +123,7 @@
    "turn": [
     {
      "phase": "Dawn",
-     "text": "Nothing."
+     "text": "If you have fewer than 2 lionfish on the map, 2 arrive at a gate."
     },
     {
      "phase": "Day",
@@ -131,11 +131,12 @@
     },
     {
      "phase": "Dusk",
-     "text": "Breed."
+     "text": "Breed, then score."
     }
    ],
    "scores": [
-    "1 VP for each warrior your gorging removes."
+    "1 VP for each warrior your gorging removes.",
+    "At Dusk, after breeding, 1 VP per reef where you have 4 or more lionfish and no other faction has warriors."
    ],
    "verbs": {
     "Move": true,
@@ -160,14 +161,14 @@
     },
     {
      "title": "Regrow",
-     "text": "After any attack that removes your starfish, place 2 starfish from your supply in a reef next to that one."
+     "text": "After any attack that removes your starfish, 2 starfish regrow in the neighboring reef where you have the most starfish."
     },
     {
      "title": "Spawn",
-     "text": "At Dawn, discard up to 2 cards. Each adds 2 starfish to a reef of its suit where you have starfish."
+     "text": "At Dawn, discard up to 2 cards. Each adds 2 starfish to a reef of its suit where you have starfish, or to any reef of its suit if you have none on the map."
     }
    ],
-   "pieces": "20 starfish. 8 Rubble tokens.",
+   "pieces": "20 starfish. 6 Rubble tokens.",
    "setup": "3 starfish in each of two neighboring reefs that aren't gates.",
    "turn": [
     {
@@ -184,7 +185,7 @@
     }
    ],
    "scores": [
-    "At Dusk, 1 VP for each reef that has your Rubble."
+    "At Dusk, 1 VP for every 2 reefs that have your Rubble, rounded up."
    ],
    "verbs": {
     "Move": true,
@@ -275,7 +276,7 @@
     },
     {
      "phase": "Day",
-     "text": "Place or turn up to 2 arrows. Then bloom: discard up to 2 cards, and each adds 1 jellyfish to every reef of its suit where you have jellyfish (Moon: every such reef)."
+     "text": "Place or turn up to 2 arrows. Then bloom: discard up to 2 cards, and each adds 1 jellyfish to every reef of its suit where you have jellyfish (Moon: every such reef). With no jellyfish on the map, a bloom puts 3 jellyfish into one reef of its suit instead."
     },
     {
      "phase": "Dusk",
@@ -284,7 +285,7 @@
    ],
    "scores": [
     "1 VP each time a sting removes a warrior.",
-    "At Dusk, after drifting, 1 VP per reef with 4 or more of your jellyfish."
+    "At Dusk, after drifting, 1 VP per reef with 3 or more of your jellyfish, 2 VP if it has 6 or more."
    ],
    "verbs": {
     "Move": false,
@@ -305,7 +306,7 @@
    "rules": [
     {
      "title": "Graze",
-     "text": "In a reef you rule, remove one enemy building or token and gain 2 Sand. If there is nothing to eat, chew the bare reef for 1 Sand, once per reef each turn."
+     "text": "In a reef you rule, remove one enemy building or token and gain 3 Sand. If there is nothing to eat, chew the bare reef for 2 Sand, once per reef each turn."
     },
     {
      "title": "Sandbar",
@@ -363,7 +364,7 @@
     },
     {
      "title": "Feed and lay",
-     "text": "A turtle away from the shore can feed: it takes a Food of the reef's suit, at most one of each suit. A turtle at your nest lays 1 egg per Food it carries, using the Food up."
+     "text": "A turtle away from the shore can feed: it takes a Food of the reef's suit, at most one of each suit. A turtle at your nest lays 1 egg per Food it carries, plus 1, using the Food up."
     }
    ],
    "pieces": "4 turtles. 3 nests (buildings). 10 eggs (tokens).",
@@ -371,7 +372,7 @@
    "turn": [
     {
      "phase": "Dawn",
-     "text": "Every egg hatches."
+     "text": "Every egg hatches and scores 1 VP. While you have fewer than 4 turtles, a hatchling also becomes a new turtle on its nest. With no turtles at all, one returns to any shore reef."
     },
     {
      "phase": "Day",
@@ -383,14 +384,14 @@
     }
    ],
    "scores": [
-    "1 VP per egg hatched. Nests score when built: 1, 2, 3.",
+    "1 VP per egg laid, and 1 VP more when it hatches. Nests score when built: 1, 2, 3.",
     "Gear crafted at your nests."
    ],
    "verbs": {
     "Move": true,
     "Battle": false,
     "Build": true,
-    "Recruit": false,
+    "Recruit": true,
     "Craft": true
    },
    "complexity": 2,
@@ -409,7 +410,7 @@
     },
     {
      "title": "Grow",
-     "text": "For each enemy warrior your bite removes, add a segment at your tail."
+     "text": "For each enemy warrior your bite removes, add a segment at your tail. At Dawn, a snake with fewer than 4 pieces adds a segment."
     },
     {
      "title": "Cut",
@@ -417,7 +418,7 @@
     }
    ],
    "pieces": "1 Head and 14 segments, all warriors.",
-   "setup": "The Head and 3 segments in a line of neighboring reefs.",
+   "setup": "The Head and 3 segments in one reef that isn't a gate.",
    "turn": [
     {
      "phase": "Dawn",
@@ -433,7 +434,7 @@
     }
    ],
    "scores": [
-    "At Dusk, 1 VP for every 2 reefs your snake is in."
+    "At Dusk, 1 VP for every 2 reefs your snake is in, rounded up."
    ],
    "verbs": {
     "Move": true,
@@ -454,7 +455,7 @@
    "rules": [
     {
      "title": "Attach",
-     "text": "Stick a free remora onto one warrior of another faction in the same reef. It goes wherever that warrior goes and can't be hit. If that warrior is removed, the remora drops off in its reef."
+     "text": "Stick free remoras onto another faction's warriors in the same reef. Attached remoras can't be hit. When the last of those warriors leaves the reef, the remoras go with it; if those warriors are all removed, the remoras drop off."
     },
     {
      "title": "Tiny",
@@ -504,7 +505,7 @@
    "rules": [
     {
      "title": "Shell shop",
-     "text": "At the start of another faction's Day, it may buy shells from your pool at your price, paying in cards. Each shell goes in a reef where the buyer has pieces and ignores the next hit on the buyer's pieces there, then comes back to your pool. Shells can't be hit or taken."
+     "text": "At the start of another faction's Day, it may buy shells from your pool at your price, paying in cards. Each shell goes in a reef where the buyer has pieces and ignores the next hit on the buyer's pieces there, then comes back to your pool. Shells are rented: all of them come back at your Dawn. Shells can't be hit or taken."
     },
     {
      "title": "Till",
@@ -524,15 +525,15 @@
     },
     {
      "phase": "Day",
-     "text": "Actions, one Till card each: move, recruit (2 crabs at a market), or build a market in a reef you rule (the Till card must match the reef's suit)."
+     "text": "Actions, one Till card each: move, recruit (2 crabs at a market, or at any gate if you have no market), or build a market in a reef you rule (the Till card must match the reef's suit)."
     },
     {
      "phase": "Dusk",
-     "text": "Set your shell price: 1 to 3 cards."
+     "text": "Set your shell price (1 to 3 cards), then score your markets."
     }
    ],
    "scores": [
-    "1 VP per shell sold. Markets score when built: 1, 2, 3, 4.",
+    "At Dusk, 1 VP per market on the map.",
     "Gear crafted at your markets."
    ],
    "verbs": {
@@ -558,7 +559,7 @@
     },
     {
      "title": "Snap",
-     "text": "At Dusk, at each lure with enemy warriors, you may bring up to 3 anglers out of the Trench and battle one faction there. You deal 2 hits before the dice, like an Ambush. Survivors sink back into the Trench."
+     "text": "At Dusk, at up to 2 lure or rim reefs with enemy warriors, you may bring up to 3 anglers out of the Trench and battle one faction there. You deal 1 hit before the dice, the first bite. Survivors sink back into the Trench."
     },
     {
      "title": "The Trench",
@@ -611,7 +612,7 @@
     },
     {
      "title": "Reach",
-     "text": "Arms stay within 2 channels of the Mantle, your body. After the Mantle moves, arms out of reach snap back to it. Lost arms regrow at the Mantle at Dusk."
+     "text": "Arms stay within 2 channels of the Mantle, your body. After the Mantle moves, arms out of reach snap back to it. Lost arms keep their orders, skip their turn, and regrow at the Mantle at Dusk."
     }
    ],
    "pieces": "The Mantle and 8 numbered arms, all warriors.",
@@ -631,8 +632,8 @@
     }
    ],
    "scores": [
-    "Each stolen token scores the usual 1 VP.",
-    "At Dusk, 1 VP per kind of treasure in your garden: each token type, and each suit of stolen card. If the Mantle is removed, the garden is lost and the Mantle returns at Dawn beside any arm."
+    "Each treasure scores 1 VP when stolen, token or card.",
+    "At Dusk, 1 VP per kind of treasure in your garden: each token type, and each suit of stolen card. If the Mantle is removed, the garden is lost and the Mantle returns at Dawn beside any arm, or at any gate if no arm is left."
    ],
    "verbs": {
     "Move": true,
@@ -661,7 +662,7 @@
     },
     {
      "title": "Galleries",
-     "text": "Three face-up Gallery cards each show a pattern, such as three connected reefs of one suit. At Dusk, score every pattern on the map that has your cuttlefish in each of its reefs, then replace it."
+     "text": "Three face-up Gallery cards each show a pattern, such as three connected reefs of one suit. At Dusk, score one pattern on the map that has your cuttlefish in each of its reefs, then replace it."
     }
    ],
    "pieces": "12 cuttlefish. 6 pigments (tokens, 2 per suit).",
@@ -669,7 +670,7 @@
    "turn": [
     {
      "phase": "Dawn",
-     "text": "1 cuttlefish arrives in each reef with your pigment."
+     "text": "1 cuttlefish arrives in each reef with your pigment, or 2 at any gate if you have no pigment on the map."
     },
     {
      "phase": "Day",
@@ -681,7 +682,7 @@
     }
    ],
    "scores": [
-    "Each pattern scores 2 to 4 VP."
+    "One pattern per Dusk, worth 2 to 4 VP."
    ],
    "verbs": {
     "Move": true,
@@ -709,7 +710,7 @@
   },
   {
    "title": "Pieces",
-   "text": "Warriors fight and count for rule. Buildings fill slots and count for rule. Tokens sit in a reef and don't count. Channel markers sit on channels, one per channel, and can't be hit."
+   "text": "Warriors fight and count for rule. Buildings fill slots and count for rule. Tokens sit in a reef and don't count. Channel markers sit on channels, one per channel, and can't be hit. Removed pieces go back to their owner's supply."
   },
   {
    "title": "Rule and moving",
