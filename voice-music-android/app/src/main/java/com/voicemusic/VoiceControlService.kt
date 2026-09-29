@@ -146,23 +146,22 @@ class VoiceControlService : Service() {
         }
 
         val command = CommandParser.parseBest(results)
-        val announcement = when (command) {
-            is Command.Play -> "Playing ${command.query}"
-            Command.OpenApp -> "Opening YouTube Music"
-            else -> null
-        }
-        if (announcement == null) {
-            audioManager.abandonAudioFocusRequest(focusRequest)
-            updateStatus(musicController.execute(command))
-            backToWakePhrase()
+        audioManager.abandonAudioFocusRequest(focusRequest)
+        if (command is Command.Play) {
+            updateStatus("Looking for ${command.query}…")
+            musicController.play(command.query) { message ->
+                if (destroyed) return@play
+                updateStatus(message)
+                // Say what actually started, so a wrong match is obvious without looking.
+                speaker.speak(message.substringBefore(". Opened search")) { backToWakePhrase() }
+            }
             return
         }
-        // Say what was heard before it starts, so a misheard title is obvious without looking.
-        updateStatus(announcement)
-        speaker.speak(announcement) {
-            if (destroyed) return@speak
-            audioManager.abandonAudioFocusRequest(focusRequest)
-            updateStatus(musicController.execute(command))
+        val message = musicController.execute(command)
+        updateStatus(message)
+        if (command == Command.OpenApp || command is Command.Unknown) {
+            speaker.speak(message) { backToWakePhrase() }
+        } else {
             backToWakePhrase()
         }
     }

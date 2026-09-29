@@ -36,6 +36,17 @@ assistants, and ordinary apps can't claim them. Instead this app has its **own**
 can change in the app (for example "hey music", "okay jukebox", "hello player"). Two or three common
 English words work best.
 
+## How a song is started
+
+1. If YouTube Music's player is running (playing or paused), the app asks it directly to
+   "play from search" — the same request Android Auto sends. The top result starts playing.
+2. If it isn't running, the app presses a virtual "play" media button to wake it (Android sends
+   this to the last music app you used), then asks it for the song.
+3. After 3.5 s it checks that a new song is actually playing and says its title and artist.
+   If not, it opens YouTube Music's search for the song instead and tells you.
+
+Tip: play something in YouTube Music once before driving, so it's the last music app used.
+
 ## How it works
 
 1. `VoiceControlService` is a foreground service (you'll see a notification) that keeps the
@@ -65,10 +76,11 @@ Tap each button in the **Setup** list:
 
 1. **Allow microphone** – required.
 2. **Download voice model** – ~40 MB, one time, for offline wake-phrase detection.
-3. **Allow notification access** – lets the app control YouTube Music's playback. (The app doesn't
-   read your notifications; Android just ties media control to this permission.)
-4. **Allow display over other apps** – **important for playing songs by name.** Android blocks
-   background apps from opening other apps unless this is on, and that's how songs are started.
+3. **Allow notification access** – **required for songs to start by themselves.** Songs are started
+   through YouTube Music's player (the way Android Auto does it), and Android only gives apps
+   access to other apps' players through this permission. The app doesn't read your notifications.
+4. **Allow display over other apps** – needed for "open YouTube Music", and for the fallback
+   that opens YouTube Music's search if a song can't be started directly.
 5. **Allow notifications** – so you can see the "listening" notification with its Stop button.
 
 Then tap **Start listening**. Use the "Try a command without speaking" box to test commands.

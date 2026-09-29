@@ -68,7 +68,13 @@ class MainActivity : Activity() {
         val testResult = findViewById<TextView>(R.id.test_result)
         findViewById<Button>(R.id.run_test_command).setOnClickListener {
             val command = CommandParser.parseBest(listOf(testInput.text.toString()))
-            testResult.text = "$command\n→ ${YouTubeMusicController(this).execute(command)}"
+            val controller = YouTubeMusicController(this)
+            if (command is Command.Play) {
+                testResult.text = "$command\n→ Looking for it…"
+                controller.play(command.query) { testResult.text = "$command\n→ $it" }
+            } else {
+                testResult.text = "$command\n→ ${controller.execute(command)}"
+            }
         }
     }
 
@@ -100,7 +106,7 @@ class MainActivity : Activity() {
         if (!downloading) {
             setStep(modelButton, modelOk, "Download voice model (~40 MB)", "Voice model ready")
         }
-        setStep(notificationAccessButton, accessOk, "Allow notification access (to control playback)", "Notification access allowed")
+        setStep(notificationAccessButton, accessOk, "Allow notification access (needed to start songs)", "Notification access allowed")
         setStep(overlayButton, overlayOk, "Allow display over other apps (to open YouTube Music)", "Can open YouTube Music")
         setStep(notificationsButton, notificationsOk, "Allow notifications (optional)", "Notifications allowed")
 
