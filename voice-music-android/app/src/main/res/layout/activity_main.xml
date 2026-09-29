@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAppearance="@android:style/TextAppearance.Material.Title" />
+
+        <Button
+            android:id="@+id/toggle_listening"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/start_listening" />
+
+        <!-- Setup checklist -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/setup_title"
+            android:textAppearance="@android:style/TextAppearance.Material.Subhead" />
+
+        <Button
+            android:id="@+id/setup_microphone"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <Button
+            android:id="@+id/setup_model"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <ProgressBar
+            android:id="@+id/model_progress"
+            style="@android:style/Widget.Material.ProgressBar.Horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="100"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/setup_notification_access"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <Button
+            android:id="@+id/setup_overlay"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <Button
+            android:id="@+id/setup_notifications"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <!-- Wake phrase -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/wake_phrase_title"
+            android:textAppearance="@android:style/TextAppearance.Material.Subhead" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <EditText
+                android:id="@+id/wake_phrase"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="@string/wake_phrase_hint"
+                android:importantForAutofill="no"
+                android:inputType="text"
+                android:maxLines="1" />
+
+            <Button
+                android:id="@+id/save_wake_phrase"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/save" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/wake_phrase_help"
+            android:textAppearance="@android:style/TextAppearance.Material.Caption" />
+
+        <!-- Commands -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/commands_title"
+            android:textAppearance="@android:style/TextAppearance.Material.Subhead" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/commands_help"
+            android:textAppearance="@android:style/TextAppearance.Material.Body1" />
+
+        <!-- Typed test -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/test_title"
+            android:textAppearance="@android:style/TextAppearance.Material.Subhead" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <EditText
+                android:id="@+id/test_command"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="@string/test_hint"
+                android:importantForAutofill="no"
+                android:inputType="text"
+                android:maxLines="1" />
+
+            <Button
+                android:id="@+id/run_test_command"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/run" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/test_result"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAppearance="@android:style/TextAppearance.Material.Body1" />
+    </LinearLayout>
+</ScrollView>
