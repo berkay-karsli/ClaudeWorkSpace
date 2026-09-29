@@ -38,12 +38,34 @@ class CommandParserTest {
     }
 
     @Test
-    fun unknown() {
-        assertEquals(Command.Unknown("what's the weather"), CommandParser.parse("what's the weather"))
+    fun justTheSongNameIsEnoughToPlayIt() {
+        fun spoken(text: String) = CommandParser.parseBest(listOf(text))
+        assertEquals(Command.Play("bohemian rhapsody"), spoken("Bohemian Rhapsody"))
+        assertEquals(Command.Play("tarkan kuzu kuzu"), spoken("Tarkan Kuzu Kuzu"))
+        assertEquals(Command.Play("bohemian rhapsody"), spoken("Bohemian Rhapsody on YouTube Music"))
     }
 
     @Test
-    fun parseBestSkipsUnknownAlternatives() {
+    fun songTitlesThatLookLikeCommandsStillPlay() {
+        fun spoken(text: String) = CommandParser.parseBest(listOf(text))
+        for (title in listOf("Hold On", "Back in Black", "Another Love", "Next to Me", "Geçti Dost Kervanı", "Stop Crying Your Heart Out")) {
+            assertEquals(title, Command.Play(title.lowercase()), spoken(title))
+        }
+    }
+
+    @Test
+    fun controlsStillWorkWithoutPlay() {
+        assertEquals(Command.Next, CommandParser.parseBest(listOf("next song")))
+        assertEquals(Command.Pause, CommandParser.parseBest(listOf("stop")))
+    }
+
+    @Test
+    fun parseBestPrefersACommandAmongAlternatives() {
         assertEquals(Command.Next, CommandParser.parseBest(listOf("necks", "next")))
+    }
+
+    @Test
+    fun emptySpeechIsUnknown() {
+        assertEquals(Command.Unknown(""), CommandParser.parseBest(listOf("", "  ")))
     }
 }

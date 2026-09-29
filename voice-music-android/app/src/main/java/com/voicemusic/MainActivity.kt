@@ -67,7 +67,7 @@ class MainActivity : Activity() {
         val testInput = findViewById<EditText>(R.id.test_command)
         val testResult = findViewById<TextView>(R.id.test_result)
         findViewById<Button>(R.id.run_test_command).setOnClickListener {
-            val command = CommandParser.parse(testInput.text.toString())
+            val command = CommandParser.parseBest(listOf(testInput.text.toString()))
             testResult.text = "$command\n→ ${YouTubeMusicController(this).execute(command)}"
         }
     }

@@ -1,20 +1,33 @@
 # Voice Music (Android)
 
-Hands-free voice control for **YouTube Music**. Say your wake phrase (default **"hey music"**),
-wait for the beep, then say a command:
+Hands-free song picking for **YouTube Music**, made for driving. Say your wake phrase (default
+**"hey music"**), wait for the beep, then **just say the song**:
+
+> "hey music" … *beep* … "Bohemian Rhapsody"
+> → the phone says *"Playing Bohemian Rhapsody"* and YouTube Music starts it.
+
+- Any song, artist, album or playlist name works, in English or Turkish ("Tarkan Kuzu Kuzu").
+  Saying "play …" first is optional.
+- It says out loud what it heard, so you know if it misheard without looking at the screen.
+- If it didn't hear you, it asks "Sorry, what should I play?" and listens once more.
+- Long titles are fine; it waits for a 1.5 s pause before deciding you're done.
+
+Other commands also work after the beep:
 
 | Say | What happens |
 | --- | --- |
 | "open YouTube Music" | Opens the app |
-| "play *Bohemian Rhapsody*" / "play *Tarkan*" | Searches YouTube Music and plays the top result |
-| "change song", "next", "skip" | Next track |
-| "change to *song name*" | Plays that song instead |
-| "previous", "go back" | Previous track |
-| "pause", "stop" | Pause |
-| "resume", "continue", "play" | Resume |
+| "next" / "skip" / "change song" | Next track |
+| "previous" / "go back" | Previous track |
+| "pause" / "stop" | Pause |
+| "resume" / "continue" | Resume |
 | "volume up" / "volume down" | Changes media volume |
 
-Turkish also works: "sonraki", "önceki", "durdur", "devam", "sesi aç", "sesi kıs", "*şarkı* çal".
+Turkish: "sonraki", "önceki", "durdur", "devam", "sesi aç", "sesi kıs", "*şarkı* çal".
+
+A command only counts if it's the whole sentence, so titles like "Hold On", "Back in Black" or
+"Another Love" play the song. If a title is exactly a command word (e.g. "Stop"), say
+"play Stop".
 
 ## Why not "Hey Google" or "Hey Siri"?
 
@@ -54,9 +67,8 @@ Tap each button in the **Setup** list:
 2. **Download voice model** – ~40 MB, one time, for offline wake-phrase detection.
 3. **Allow notification access** – lets the app control YouTube Music's playback. (The app doesn't
    read your notifications; Android just ties media control to this permission.)
-4. **Allow display over other apps** – Android blocks background apps from opening other apps
-   unless this is on. Needed for "open YouTube Music" and "play …" when the screen isn't showing
-   this app.
+4. **Allow display over other apps** – **important for playing songs by name.** Android blocks
+   background apps from opening other apps unless this is on, and that's how songs are started.
 5. **Allow notifications** – so you can see the "listening" notification with its Stop button.
 
 Then tap **Start listening**. Use the "Try a command without speaking" box to test commands.
@@ -67,6 +79,8 @@ Then tap **Start listening**. Use the "Try a command without speaking" box to te
 - Listening must be started from the app; Android doesn't allow microphone services to start
   themselves in the background (e.g. after reboot).
 - Continuous listening uses some battery. Stop it from the notification when you don't need it.
+- Keep the phone unlocked on its car mount while driving; Android may not let YouTube Music start a
+  new song while the screen is locked.
 - With music playing loudly through the phone speaker the wake phrase is harder to hear; a headset
   or a little more distance helps.
 - Some battery-saver modes (Xiaomi, Samsung, Huawei…) kill background services. If listening stops

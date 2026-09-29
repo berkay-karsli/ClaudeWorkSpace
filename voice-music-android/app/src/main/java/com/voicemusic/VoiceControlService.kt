@@ -17,7 +17,6 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.util.Log
-import android.widget.Toast
 import org.vosk.Model
 import java.util.concurrent.Executors
 
@@ -31,6 +30,7 @@ class VoiceControlService : Service() {
     private val loader = Executors.newSingleThreadExecutor()
     private lateinit var musicController: YouTubeMusicController
     private lateinit var commandListener: CommandListener
+    private lateinit var speaker: Speaker
     private lateinit var audioManager: AudioManager
     private var model: Model? = null
     private var detector: WakeWordDetector? = null
@@ -53,6 +53,7 @@ class VoiceControlService : Service() {
         super.onCreate()
         musicController = YouTubeMusicController(this)
         commandListener = CommandListener(this)
+        speaker = Speaker(this)
         audioManager = getSystemService(AudioManager::class.java)
         tone = runCatching { ToneGenerator(AudioManager.STREAM_MUSIC, 80) }.getOrNull()
         createChannel()
@@ -116,31 +117,65 @@ class VoiceControlService : Service() {
             return
         }
         audioManager.requestAudioFocus(focusRequest)
+        listenForCommand(retriesLeft = 1)
+    }
+
+    private fun listenForCommand(retriesLeft: Int) {
         tone?.startTone(ToneGenerator.TONE_PROP_BEEP, 150)
-        updateStatus("Listening for a command…")
+        updateStatus("Listening… say a song name or a command")
         // Give the beep a moment so it isn't picked up as part of the command.
         mainHandler.postDelayed({
             if (destroyed) return@postDelayed
-            commandListener.listen { results ->
-                audioManager.abandonAudioFocusRequest(focusRequest)
-                if (results.isEmpty()) {
-                    updateStatus("Didn't catch that")
-                } else {
-                    val command = CommandParser.parseBest(results)
-                    val message = musicController.execute(command)
-                    Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-                    updateStatus(message)
-                }
-                // Let the status show briefly, then go back to waiting for the wake phrase.
-                mainHandler.postDelayed(::listenForWakePhrase, 1_500)
-            }
+            commandListener.listen { results -> onCommandHeard(results, retriesLeft) }
         }, 250)
+    }
+
+    private fun onCommandHeard(results: List<String>, retriesLeft: Int) {
+        if (destroyed) return
+        if (results.isEmpty()) {
+            updateStatus("Didn't catch that")
+            if (retriesLeft > 0) {
+                speaker.speak("Sorry, what should I play?") {
+                    if (!destroyed) listenForCommand(retriesLeft - 1)
+                }
+            } else {
+                audioManager.abandonAudioFocusRequest(focusRequest)
+                speaker.speak("Sorry, I didn't catch that") { backToWakePhrase() }
+            }
+            return
+        }
+
+        val command = CommandParser.parseBest(results)
+        val announcement = when (command) {
+            is Command.Play -> "Playing ${command.query}"
+            Command.OpenApp -> "Opening YouTube Music"
+            else -> null
+        }
+        if (announcement == null) {
+            audioManager.abandonAudioFocusRequest(focusRequest)
+            updateStatus(musicController.execute(command))
+            backToWakePhrase()
+            return
+        }
+        // Say what was heard before it starts, so a misheard title is obvious without looking.
+        updateStatus(announcement)
+        speaker.speak(announcement) {
+            if (destroyed) return@speak
+            audioManager.abandonAudioFocusRequest(focusRequest)
+            updateStatus(musicController.execute(command))
+            backToWakePhrase()
+        }
+    }
+
+    private fun backToWakePhrase() {
+        mainHandler.postDelayed(::listenForWakePhrase, 1_000)
     }
 
     override fun onDestroy() {
         destroyed = true
         mainHandler.removeCallbacksAndMessages(null)
         commandListener.destroy()
+        speaker.shutdown()
         audioManager.abandonAudioFocusRequest(focusRequest)
         detector?.shutdown()
         detector = null

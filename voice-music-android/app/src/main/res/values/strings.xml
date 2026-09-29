@@ -9,10 +9,10 @@
     <string name="start_listening">Start listening</string>
     <string name="stop_listening">Stop listening</string>
     <string name="test_title">Try a command without speaking</string>
-    <string name="test_hint">e.g. play Tarkan</string>
+    <string name="test_hint">e.g. Tarkan Kuzu Kuzu</string>
     <string name="run">Run</string>
-    <string name="commands_title">Things you can say after the wake phrase</string>
-    <string name="commands_help">• "open YouTube Music"\n• "play &lt;song, artist or playlist&gt;"\n• "change song" / "next" / "skip"\n• "change to &lt;song&gt;"\n• "previous" / "go back"\n• "pause" / "stop"\n• "resume" / "continue"\n• "volume up" / "volume down"\n\nTurkish works too: "sonraki", "önceki", "durdur", "devam", "sesi aç", "sesi kıs", "&lt;şarkı&gt; çal".</string>
+    <string name="commands_title">After the beep, just say the song</string>
+    <string name="commands_help">Say the wake phrase, wait for the beep, then say the song, artist, album or playlist name, e.g. "Bohemian Rhapsody" or "Tarkan Kuzu Kuzu". The app repeats what it heard ("Playing …") and starts it in YouTube Music. If it didn\'t hear you, it asks once more.\n\nOther commands: "open YouTube Music", "next", "previous", "pause", "resume", "volume up", "volume down" (Turkish: "sonraki", "önceki", "durdur", "devam", "sesi aç", "sesi kıs").\n\nIf a song title is also a command (like "Stop"), say "play" first: "play Stop".</string>
     <string name="channel_name">Voice control</string>
     <string name="stop">Stop</string>
 </resources>

@@ -78,18 +78,22 @@ class YouTubeMusicController(private val context: Context) {
     }
 
     private fun play(query: String): String {
+        // Same intent Google Assistant uses: YouTube Music searches and plays the top result. It
+        // needs "Display over other apps" when this app is in the background.
+        val intent = Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH)
+            .setPackage(PACKAGE)
+            .putExtra(SearchManager.QUERY, query)
+            .putExtra(MediaStore.EXTRA_MEDIA_FOCUS, "vnd.android.cursor.item/*")
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        if (Settings.canDrawOverlays(context)) return launch(intent, "Playing \"$query\"")
+
+        // Without that permission, ask YouTube Music's running media session directly.
         val session = session()
         val actions = session?.playbackState?.actions ?: 0L
         if (session != null && actions and PlaybackState.ACTION_PLAY_FROM_SEARCH != 0L) {
             session.transportControls.playFromSearch(query, Bundle())
             return "Playing \"$query\""
         }
-        // Same intent Google Assistant uses: YouTube Music searches and starts playing the top result.
-        val intent = Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH)
-            .setPackage(PACKAGE)
-            .putExtra(SearchManager.QUERY, query)
-            .putExtra(MediaStore.EXTRA_MEDIA_FOCUS, "vnd.android.cursor.item/*")
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         return launch(intent, "Playing \"$query\"")
     }
 

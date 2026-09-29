@@ -57,6 +57,9 @@ class CommandListener(private val context: Context) {
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
             .putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
+            // Allow short pauses inside long song titles without cutting off.
+            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1_500L)
+            .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1_500L)
         handler.postDelayed(timeout, TIMEOUT_MS)
         speech.startListening(intent)
     }
@@ -68,6 +71,6 @@ class CommandListener(private val context: Context) {
     }
 
     private companion object {
-        const val TIMEOUT_MS = 10_000L
+        const val TIMEOUT_MS = 15_000L
     }
 }

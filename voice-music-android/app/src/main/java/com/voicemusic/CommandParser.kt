@@ -19,13 +19,17 @@ sealed interface Command {
  */
 object CommandParser {
 
-    /** Parses several recognizer alternatives and returns the first one that makes sense. */
+    /**
+     * Picks the command from the recognizer's alternatives (best first). Anything that isn't a
+     * control phrase is treated as a song to play, so saying just the song name is enough.
+     */
     fun parseBest(candidates: List<String>): Command {
         for (candidate in candidates) {
             val command = parse(candidate)
             if (command !is Command.Unknown) return command
         }
-        return Command.Unknown(candidates.firstOrNull().orEmpty())
+        val best = candidates.firstOrNull { normalize(it).isNotEmpty() } ?: return Command.Unknown("")
+        return playOrResume(normalize(best))
     }
 
     fun parse(raw: String): Command {
@@ -45,16 +49,15 @@ object CommandParser {
             }
         }
 
-        // Short control phrases. Long sentences are more likely a song title.
-        if (text.split(' ').size <= 4) {
-            when {
-                VOLUME_UP.containsMatchIn(text) -> return Command.VolumeUp
-                VOLUME_DOWN.containsMatchIn(text) -> return Command.VolumeDown
-                PREVIOUS.containsMatchIn(text) -> return Command.Previous
-                NEXT.containsMatchIn(text) -> return Command.Next
-                PAUSE.containsMatchIn(text) -> return Command.Pause
-                RESUME.matches(text) -> return Command.Resume
-            }
+        // Control phrases must match the whole sentence, so song titles like "Hold On",
+        // "Back in Black" or "Another Love" aren't mistaken for commands.
+        when {
+            VOLUME_UP.matches(text) -> return Command.VolumeUp
+            VOLUME_DOWN.matches(text) -> return Command.VolumeDown
+            PREVIOUS.matches(text) -> return Command.Previous
+            NEXT.matches(text) -> return Command.Next
+            PAUSE.matches(text) -> return Command.Pause
+            RESUME.matches(text) -> return Command.Resume
         }
 
         PLAY_TR.find(text)?.let { return playOrResume(it.groupValues[1].ifEmpty { it.groupValues[2] }) }
@@ -99,10 +102,24 @@ object CommandParser {
     private val PLAY_PREVIOUS = Regex("(the )?(previous|last)( song| track| one)?")
     private val PLAY_TR = Regex("^(?:çal\\s+(.+)|(.+?)\\s+(?:çal|oynat|aç))$")
 
-    private val VOLUME_UP = Regex("\\b(volume up|louder|turn it up|turn up|increase (the )?volume)\\b|sesi (aç|artır|yükselt)")
-    private val VOLUME_DOWN = Regex("\\b(volume down|quieter|softer|turn it down|turn down|lower (the )?volume|decrease (the )?volume)\\b|sesi (kıs|azalt|düşür)")
-    private val PREVIOUS = Regex("\\b(previous|go back|last song|back)\\b|önceki|geri")
-    private val NEXT = Regex("\\b(next|skip|change|another|different)\\b|sonraki|geç|atla|değiştir|başka")
-    private val PAUSE = Regex("\\b(pause|stop|hold on|quiet|silence)\\b|durdur|duraklat|dur|sus")
-    private val RESUME = Regex("^(play|resume|continue|unpause|keep playing|play music|go on|devam( et)?|oynat|çal)$")
+    private val VOLUME_UP = Regex(
+        "volume up|turn (it |the volume )?up|louder|increase (the )?volume|sesi (aç|artır|yükselt)"
+    )
+    private val VOLUME_DOWN = Regex(
+        "volume down|turn (it |the volume )?down|quieter|softer|(lower|decrease) (the )?volume|sesi (kıs|azalt|düşür)"
+    )
+    private val PREVIOUS = Regex(
+        "(the )?(previous|last) (song|track|one)|previous|go back|back|önceki( şarkı| parça)?|geri( dön| al)?"
+    )
+    private val NEXT = Regex(
+        "(next|skip|change)( the)?( song| track| music| one)?|(another|different|new) (song|track|one)|" +
+            "play something else|something else|(sonraki|başka|diğer)( şarkı| parça)?|" +
+            "(geç|atla|değiştir)|(şarkıyı|parçayı) (geç|atla|değiştir)|(sonraki|başka|diğer) (şarkıya|parçaya) geç"
+    )
+    private val PAUSE = Regex(
+        "(pause|stop)( the)?( music| song| playing| it)?|durdur|duraklat|dur|(müziği|şarkıyı) (durdur|duraklat|kapat)"
+    )
+    private val RESUME = Regex(
+        "play|play music|(resume|continue|unpause)( the)?( music| song| playing)?|keep playing|go on|devam( et)?|oynat|çal"
+    )
 }
