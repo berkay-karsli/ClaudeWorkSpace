@@ -21,6 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,18 +55,21 @@ private fun Sheet(title: String, onClose: () -> Unit, content: @Composable Colum
 }
 
 @Composable
-fun LogDialog(g: GameState, @Suppress("UNUSED_PARAMETER") version: Int, onClose: () -> Unit) {
-    Sheet("What happened", onClose) {
-        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            for (line in g.log.reversed()) {
-                val round = line.startsWith("Round ")
-                val f = FactionId.entries.firstOrNull { line.startsWith(it.display + ":") }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (f != null) {
-                        Portrait(f, 18.dp, ring = 1.dp)
-                        Spacer(Modifier.width(6.dp))
+fun LogDialog(g: GameState, version: Int, onClose: () -> Unit) {
+    // Keyed on the version: the game state changes in place, so this must rebuild after every move.
+    key(version) {
+        Sheet("What happened", onClose) {
+            Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                for (line in g.log.reversed()) {
+                    val round = line.startsWith("Round ")
+                    val f = FactionId.entries.firstOrNull { line.startsWith(it.display + ":") }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (f != null) {
+                            Portrait(f, 18.dp, ring = 1.dp)
+                            Spacer(Modifier.width(6.dp))
+                        }
+                        Text(line, color = if (round) Reef.ink else Reef.muted, fontWeight = if (round) FontWeight.SemiBold else FontWeight.Normal, fontSize = 13.sp)
                     }
-                    Text(line, color = if (round) Reef.ink else Reef.muted, fontWeight = if (round) FontWeight.SemiBold else FontWeight.Normal, fontSize = 13.sp)
                 }
             }
         }

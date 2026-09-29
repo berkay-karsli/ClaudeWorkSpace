@@ -26,6 +26,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -320,20 +321,21 @@ private fun Instruction(text: String) {
 
 /** Every faction's portrait and VP in one row. Tap one to open its board. */
 @Composable
-// The game state changes in place, so everything drawn from it also takes [version]: Compose then
-// redraws it after every move instead of skipping it because the state object is the same one.
-private fun Scoreboard(g: GameState, @Suppress("UNUSED_PARAMETER") version: Int, modifier: Modifier = Modifier, onOpen: (FactionId) -> Unit) {
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-        g.players.forEachIndexed { i, pl ->
-            val turn = g.phase != Phase.OVER && g.current == i
-            Box(Modifier.clickable { onOpen(pl.faction) }.padding(bottom = 4.dp, end = 6.dp)) {
-                Portrait(pl.faction, 42.dp, ring = if (turn) 3.dp else 1.5.dp)
-                VpCoin(pl.vp, Modifier.align(Alignment.BottomEnd).offset(x = 6.dp, y = 4.dp))
-                if (!pl.human) {
-                    Text(
-                        "bot", color = Reef.night, fontSize = 8.sp, fontWeight = FontWeight.Bold,
-                        modifier = Modifier.align(Alignment.TopStart).background(Reef.muted, RoundedCornerShape(4.dp)).padding(horizontal = 2.dp),
-                    )
+private fun Scoreboard(g: GameState, version: Int, modifier: Modifier = Modifier, onOpen: (FactionId) -> Unit) {
+    // Keyed on the version: the game state changes in place, so this must rebuild after every move.
+    key(version) {
+        Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            g.players.forEachIndexed { i, pl ->
+                val turn = g.phase != Phase.OVER && g.current == i
+                Box(Modifier.clickable { onOpen(pl.faction) }.padding(bottom = 4.dp, end = 6.dp)) {
+                    Portrait(pl.faction, 42.dp, ring = if (turn) 3.dp else 1.5.dp)
+                    VpCoin(pl.vp, Modifier.align(Alignment.BottomEnd).offset(x = 6.dp, y = 4.dp))
+                    if (!pl.human) {
+                        Text(
+                            "bot", color = Reef.night, fontSize = 8.sp, fontWeight = FontWeight.Bold,
+                            modifier = Modifier.align(Alignment.TopStart).background(Reef.muted, RoundedCornerShape(4.dp)).padding(horizontal = 2.dp),
+                        )
+                    }
                 }
             }
         }
@@ -342,51 +344,60 @@ private fun Scoreboard(g: GameState, @Suppress("UNUSED_PARAMETER") version: Int,
 
 /** What the faction on turn has left, one line under the prompt. */
 @Composable
-private fun Supply(g: GameState, p: Int, @Suppress("UNUSED_PARAMETER") version: Int) {
-    val pl = g.players[p]
-    val extra = buildList {
-        add(Game.rules(pl.faction).supplySummary(g, p))
-        pl.dominance?.let { add("Dominance: ${Cards[it].suit.label}") }
-        if (pl.gear.isNotEmpty()) add("Gear: " + pl.gear.joinToString { Cards[it].name })
+private fun Supply(g: GameState, p: Int, version: Int) {
+    // Keyed on the version: the game state changes in place, so this must rebuild after every move.
+    key(version) {
+        val pl = g.players[p]
+        val extra = buildList {
+            add(Game.rules(pl.faction).supplySummary(g, p))
+            pl.dominance?.let { add("Dominance: ${Cards[it].suit.label}") }
+            if (pl.gear.isNotEmpty()) add("Gear: " + pl.gear.joinToString { Cards[it].name })
+        }
+        Text(extra.joinToString(" · "), color = Reef.muted, fontSize = 11.sp)
     }
-    Text(extra.joinToString(" · "), color = Reef.muted, fontSize = 11.sp)
 }
 
 @Composable
-private fun LastEvents(g: GameState, @Suppress("UNUSED_PARAMETER") version: Int) {
-    val lines = g.log.takeLast(6).reversed()
-    Column(Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-        SectionTitle("Latest")
-        for (l in lines) {
-            val f = FactionId.entries.firstOrNull { l.startsWith(it.display + ":") }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (f != null) {
-                    Portrait(f, 18.dp, ring = 1.dp)
-                    Spacer(Modifier.width(5.dp))
+private fun LastEvents(g: GameState, version: Int) {
+    // Keyed on the version: the game state changes in place, so this must rebuild after every move.
+    key(version) {
+        val lines = g.log.takeLast(6).reversed()
+        Column(Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            SectionTitle("Latest")
+            for (l in lines) {
+                val f = FactionId.entries.firstOrNull { l.startsWith(it.display + ":") }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (f != null) {
+                        Portrait(f, 18.dp, ring = 1.dp)
+                        Spacer(Modifier.width(5.dp))
+                    }
+                    Text(if (f != null) l.substringAfter(": ") else l, color = Reef.muted, fontSize = 12.sp)
                 }
-                Text(if (f != null) l.substringAfter(": ") else l, color = Reef.muted, fontSize = 12.sp)
             }
         }
     }
 }
 
 @Composable
-private fun Hand(controller: GameController, selectable: Set<Int>, d: Decision?, @Suppress("UNUSED_PARAMETER") version: Int) {
-    val g = controller.game
-    val viewer = controller.viewer
-    if (g.players.none { it.human }) return
-    val hand = g.players[viewer].hand
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        SectionTitle("${g.players[viewer].faction.display} hand · ${hand.size}")
-        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            for (c in hand) {
-                val canPick = c in selectable
-                PlayingCard(
-                    c, highlighted = canPick,
-                    onClick = if (canPick && d != null) {
-                        { controller.pick = OptionPicker.withKind(d.options, controller.pick).copy(card = c) }
-                    } else null,
-                )
+private fun Hand(controller: GameController, selectable: Set<Int>, d: Decision?, version: Int) {
+    // Keyed on the version: the game state changes in place, so this must rebuild after every move.
+    key(version) {
+        val g = controller.game
+        val viewer = controller.viewer
+        if (g.players.none { it.human }) return
+        val hand = g.players[viewer].hand
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            SectionTitle("${g.players[viewer].faction.display} hand · ${hand.size}")
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                for (c in hand) {
+                    val canPick = c in selectable
+                    PlayingCard(
+                        c, highlighted = canPick,
+                        onClick = if (canPick && d != null) {
+                            { controller.pick = OptionPicker.withKind(d.options, controller.pick).copy(card = c) }
+                        } else null,
+                    )
+                }
             }
         }
     }
