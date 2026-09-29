@@ -41,58 +41,100 @@ private fun shot(out: File, name: String, content: @Composable () -> Unit) {
     println("wrote $name.png")
 }
 
-/**
- * Plays bot games (trying a few seeds) until [stop] holds, then hands every seat to a person so
- * the panel shows their controls. Null if no game reached that situation.
- */
-private fun playUntil(seed: Long, stop: (GameState) -> Boolean): GameState? {
-    for (s in seed until seed + 10) {
-        val g = Game.newGame(listOf(Seat(FactionId.SHARKS, false), Seat(FactionId.CORAL, false)), s)
+/** Every seat played by a person, so the panel shows their controls. */
+private fun asHumans(g: GameState) = GameState.fromJson(g.toJson().replace("\"human\":false", "\"human\":true"))
+
+/** Plays bot games of [lineup] (trying a few seeds) until [stop] holds. Null if none got there. */
+private fun playUntil(lineup: List<FactionId>, seed: Long, stop: (GameState) -> Boolean): GameState? {
+    for (s in seed until seed + 12) {
+        val g = Game.newGame(lineup.map { Seat(it, false) }, s)
         val bot = Bot(Random(s), samples = 1)
-        while (g.phase != Phase.OVER && !stop(g)) Game.apply(g, bot.choose(g, Game.decision(g)!!))
-        if (stop(g)) return GameState.fromJson(g.toJson().replace("\"human\":false", "\"human\":true"))
+        while (g.phase != Phase.OVER && !stop(g) && g.round < 40) Game.apply(g, bot.choose(g, Game.decision(g)!!))
+        if (stop(g)) return asHumans(g)
     }
-    println("no game reached the situation for seed $seed")
+    println("no ${lineup.joinToString { it.display }} game reached the situation for seed $seed")
     return null
+}
+
+/** A human-seat controller whose screen shows [f]'s hand. */
+private fun controllerFor(g: GameState, f: FactionId, pick: OptionPicker.Pick = OptionPicker.Pick()) =
+    GameController(g, MemoryStore).also {
+        it.viewer = g.player(f)
+        it.seenBattle = g.lastBattle?.seq ?: -1
+        it.pick = pick
+    }
+
+/**
+ * For [f] in a game of [lineup]: its Day with the action cards, then the first two-reef action
+ * part-chosen (every destination arrow) and fully chosen (the preview of exactly what happens).
+ */
+private fun factionDay(out: File, n: Int, lineup: List<FactionId>, f: FactionId, seed: Long) {
+    val g = playUntil(lineup, seed) {
+        it.round >= 3 && it.phase == Phase.DAY && it.pending.isEmpty() && it.current == it.player(f) &&
+            OptionPicker.kinds(Game.decision(it)!!.options).size >= 3
+    } ?: return
+    val key = f.key
+    shot(out, "%02d-$key-day".format(n)) { GameScreen(controllerFor(g, f), {}, {}) }
+    val options = Game.decision(g)!!.options
+    val twoReef = options.firstOrNull { it.reefs.size >= 2 } ?: options.firstOrNull { it.reefs.isNotEmpty() } ?: return
+    shot(out, "%02d-$key-choose".format(n)) {
+        GameScreen(controllerFor(g.deepCopy(), f, OptionPicker.Pick(kind = twoReef.kind, reefs = twoReef.reefs.take(1))), {}, {})
+    }
+    shot(out, "%02d-$key-preview".format(n)) {
+        GameScreen(
+            controllerFor(
+                g.deepCopy(), f,
+                OptionPicker.Pick(kind = twoReef.kind, reefs = twoReef.reefs, card = twoReef.card, target = twoReef.target, targetChosen = true, variant = twoReef.variant, count = twoReef.count),
+            ),
+            {}, {},
+        )
+    }
 }
 
 fun main(args: Array<String>) {
     val out = File(args.firstOrNull() ?: "screens").apply { mkdirs() }
 
-    shot(out, "1-home") { HomeScreen(saved = playUntil(3) { it.round >= 3 }, onContinue = {}, onNew = {}, onHowToPlay = {}) }
-    shot(out, "2-setup") { SetupScreen(onStart = {}, onBack = {}) }
+    val lineups = listOf(
+        listOf(FactionId.SHARKS, FactionId.CORAL, FactionId.JELLYFISH, FactionId.PARROTFISH),
+        listOf(FactionId.SNAKE, FactionId.OCTOPUS, FactionId.REMORAS, FactionId.CRABS),
+        listOf(FactionId.TURTLES, FactionId.ANGLERS, FactionId.CUTTLEFISH, FactionId.LIONFISH),
+        listOf(FactionId.SARDINES, FactionId.STARFISH, FactionId.SHARKS, FactionId.OCTOPUS),
+    )
 
-    val setup = Game.newGame(listOf(Seat(FactionId.SHARKS, true), Seat(FactionId.CORAL, false)), 42)
-    shot(out, "3-sharks-set-up") { GameScreen(GameController(setup, MemoryStore), {}, {}) }
-
-    val sharksDay = playUntil(7) { it.round >= 4 && it.phase == Phase.DAY && it.current == it.player(FactionId.SHARKS) && it.pending.isEmpty() }
-    if (sharksDay != null) {
-        shot(out, "4-sharks-day") { GameScreen(GameController(sharksDay, MemoryStore), {}, {}) }
-
-        val hunting = GameController(sharksDay.deepCopy(), MemoryStore)
-        val hunt = Game.decision(hunting.game)!!.options.first { it.kind == "Hunt" }
-        hunting.pick = OptionPicker.Pick(kind = "Hunt", reefs = listOf(hunt.reefs[0]))
-        shot(out, "5-sharks-hunt-destination") { GameScreen(hunting, {}, {}) }
-
-        val handoff = GameController(sharksDay.deepCopy(), MemoryStore)
-        handoff.viewer = handoff.game.player(FactionId.CORAL)
-        shot(out, "7-pass-the-phone") { GameScreen(handoff, {}, {}) }
+    val saved = playUntil(lineups[0], 3) { it.round >= 3 }
+    shot(out, "00-home") { HomeScreen(saved = saved, onContinue = {}, onNew = {}, onHowToPlay = {}) }
+    shot(out, "01-setup") { SetupScreen(onStart = {}, onBack = {}, initial = lineups[1]) }
+    shot(out, "02-setup-low-reach") { SetupScreen(onStart = {}, onBack = {}, initial = listOf(FactionId.TURTLES, FactionId.CORAL)) }
+    for ((i, f) in listOf(FactionId.SHARKS, FactionId.OCTOPUS, FactionId.CRABS, FactionId.CUTTLEFISH).withIndex()) {
+        shot(out, "03-board-${i + 1}-${f.key}") { RulesDialog(listOf(f)) {} }
     }
 
-    val coralDay = playUntil(11) {
-        it.round >= 3 && it.phase == Phase.DAY && it.pending.isEmpty() && it.current == it.player(FactionId.CORAL) &&
-            Game.decision(it)!!.options.any { o -> o.kind == "Grow" }
-    }
-    if (coralDay != null) {
-        val growing = GameController(coralDay, MemoryStore)
-        growing.viewer = coralDay.player(FactionId.CORAL)
-        val grow = Game.decision(coralDay)!!.options.first { it.kind == "Grow" }
-        growing.pick = OptionPicker.Pick(kind = "Grow", reefs = grow.reefs)
-        shot(out, "6-coral-grow-card") { GameScreen(growing, {}, {}) }
+    var n = 10
+    val seen = mutableSetOf<FactionId>()
+    for ((li, lineup) in lineups.withIndex()) {
+        for (f in lineup) {
+            if (!seen.add(f)) continue
+            factionDay(out, n++, lineup, f, 20L + li * 7)
+        }
     }
 
-    val over = playUntil(5) { it.phase == Phase.OVER }
-    if (over != null) shot(out, "8-game-over") { GameScreen(GameController(over, MemoryStore), {}, {}) }
+    // A battle, as the popup shows it.
+    val battle = playUntil(lineups[0], 40) { it.lastBattle != null && it.lastBattle!!.dice.isNotEmpty() && it.pending.isEmpty() }
+    if (battle != null) {
+        val c = controllerFor(battle, battle.players[battle.current].faction)
+        c.seenBattle = -1
+        shot(out, "40-battle") { GameScreen(c, {}, {}) }
+    }
 
-    shot(out, "9-rules") { RulesDialog(listOf(FactionId.SHARKS, FactionId.CORAL)) {} }
+    // Passing the phone between two people.
+    val handoff = playUntil(lineups[2], 50) { it.round >= 2 && it.phase == Phase.DAY }
+    if (handoff != null) {
+        val c = controllerFor(handoff, handoff.players[(handoff.current + 1) % handoff.players.size].faction)
+        shot(out, "41-pass-the-phone") { GameScreen(c, {}, {}) }
+    }
+
+    val over = playUntil(lineups[1], 60) { it.phase == Phase.OVER }
+    if (over != null) shot(out, "42-game-over") { GameScreen(GameController(over, MemoryStore), {}, {}) }
+
+    shot(out, "43-shared-rules") { RulesDialog(emptyList()) {} }
 }

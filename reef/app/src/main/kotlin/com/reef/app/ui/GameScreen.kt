@@ -7,8 +7,6 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -19,7 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -37,15 +34,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.reef.app.ui.art.Art
+import com.reef.app.ui.art.Icons
+import com.reef.app.ui.art.Portraits
+import com.reef.engine.BattleReport
 import com.reef.engine.Board
 import com.reef.engine.Bot
 import com.reef.engine.Cards
 import com.reef.engine.Decision
+import com.reef.engine.EndDay
 import com.reef.engine.FactionId
 import com.reef.engine.Game
 import com.reef.engine.GameState
@@ -54,6 +57,7 @@ import com.reef.engine.OptionPicker
 import com.reef.engine.OptionPicker.Pick
 import com.reef.engine.OptionPicker.Step
 import com.reef.engine.Phase
+import com.reef.engine.Suit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -74,6 +78,9 @@ class GameController(val game: GameState, private val store: SaveStore) {
     /** The person whose hand is on screen. In pass-and-play it changes only after the cover screen. */
     var viewer by mutableIntStateOf(game.players.indexOfFirst { it.human }.coerceAtLeast(0))
 
+    /** The last battle the players have closed in the battle popup. */
+    var seenBattle by mutableIntStateOf(game.lastBattle?.seq ?: -1)
+
     val humans: Int get() = game.players.count { it.human }
 
     fun decision(): Decision? = Game.decision(game)
@@ -93,6 +100,7 @@ fun GameScreen(controller: GameController, onExit: () -> Unit, onRematch: () -> 
     val d = remember(version) { controller.decision() }
     val bot = remember { Bot() }
     var showLog by remember { mutableStateOf(false) }
+    var board by remember { mutableStateOf<FactionId?>(null) }
     var showRules by remember { mutableStateOf(false) }
 
     // Bots take their turn after a short pause so people can follow what happened.
@@ -108,8 +116,10 @@ fun GameScreen(controller: GameController, onExit: () -> Unit, onRematch: () -> 
     val humanTurn = d != null && g.players[d.player].human
     val needsHandoff = humanTurn && controller.humans > 1 && d!!.player != controller.viewer
     val myDecision = humanTurn && !needsHandoff
+    val pick = if (myDecision) OptionPicker.withKind(d!!.options, controller.pick) else Pick()
     val step = if (myDecision) OptionPicker.next(d!!.options, controller.pick) else null
-    val matching = if (myDecision) OptionPicker.matching(d!!.options, OptionPicker.withKind(d.options, controller.pick)) else emptyList()
+    val matching = if (myDecision) OptionPicker.matching(d!!.options, pick) else emptyList()
+    val marks = if (step != null) marksFor(pick, step) else emptyList()
 
     Box(Modifier.fillMaxSize().background(Reef.night)) {
         Row(Modifier.fillMaxSize()) {
@@ -117,18 +127,19 @@ fun GameScreen(controller: GameController, onExit: () -> Unit, onRematch: () -> 
                 g = g,
                 version = version,
                 highlights = (step as? Step.ChooseReef)?.reefs ?: emptySet(),
-                chosen = controller.pick.reefs,
-                onReefTap = { reef -> controller.pick = OptionPicker.withKind(d!!.options, controller.pick).let { it.copy(reefs = it.reefs + reef) } },
+                chosen = pick.reefs,
+                marks = marks,
+                onReefTap = { reef -> controller.pick = pick.copy(reefs = pick.reefs + reef) },
                 modifier = Modifier.weight(1f).fillMaxHeight(),
             )
             // A landscape phone is short: the scoreboard stays on top, and everything below scrolls,
             // with the current choice first so it is always in view.
             Column(
-                Modifier.width(330.dp).fillMaxHeight().background(Reef.surface).padding(horizontal = 12.dp, vertical = 8.dp),
+                Modifier.width(340.dp).fillMaxHeight().background(Reef.surface).padding(horizontal = 10.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Scoreboard(g, Modifier.weight(1f))
+                    Scoreboard(g, Modifier.weight(1f)) { board = it }
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         SmallButton("Rules") { showRules = true }
                         SmallButton("Log") { showLog = true }
@@ -139,11 +150,11 @@ fun GameScreen(controller: GameController, onExit: () -> Unit, onRematch: () -> 
                 Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     when {
                         d == null -> Text(g.winText, color = Reef.ink, fontWeight = FontWeight.SemiBold)
-                        !humanTurn -> Text("The bot is playing ${g.players[d.player].faction.display}…", color = Reef.muted)
-                        needsHandoff -> Text("Waiting for ${g.players[d.player].faction.display}.", color = Reef.muted)
+                        !humanTurn -> Waiting(g.players[d.player].faction, "is thinking…")
+                        needsHandoff -> Waiting(g.players[d.player].faction, "plays next")
                         else -> {
-                            Text(d.prompt, color = Reef.ink, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                            StepControls(controller, d, step!!, matching)
+                            Prompt(g, d)
+                            StepControls(controller, d, step!!, pick, matching)
                         }
                     }
                     Hand(controller, (step as? Step.ChooseCard)?.cards ?: emptySet(), d)
@@ -152,92 +163,187 @@ fun GameScreen(controller: GameController, onExit: () -> Unit, onRematch: () -> 
             }
         }
         if (needsHandoff) Handoff(g.players[d!!.player].faction) { controller.viewer = d.player }
+        val battle = g.lastBattle
+        if (battle != null && battle.seq != controller.seenBattle && !needsHandoff && g.phase != Phase.OVER) {
+            BattlePopup(battle) { controller.seenBattle = battle.seq }
+        }
         if (g.phase == Phase.OVER) GameOver(g, onExit, onRematch)
         if (showLog) LogDialog(g) { showLog = false }
         if (showRules) RulesDialog(g.players.map { it.faction }) { showRules = false }
+        board?.let { f -> RulesDialog(listOf(f) + g.players.map { it.faction }.filter { it != f }) { board = null } }
     }
 }
 
-@Composable
-private fun Scoreboard(g: GameState, modifier: Modifier = Modifier) {
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        g.players.forEachIndexed { i, pl ->
-            val turn = g.phase != Phase.OVER && g.current == i
-            Column {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(10.dp).background(Reef.faction(pl.faction), CircleShape))
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        pl.faction.display + (if (pl.human) "" else " (bot)") + (if (turn) " ◀" else ""),
-                        color = Reef.ink, fontWeight = if (turn) FontWeight.Bold else FontWeight.Normal, fontSize = 14.sp,
-                        modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    )
-                    Text("${pl.vp}", color = Reef.ink, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Text(" VP", color = Reef.muted, fontSize = 11.sp)
-                }
-                val extra = buildList {
-                    pl.dominance?.let { add("Dominance: ${Cards[it].suit.label}") }
-                    add(Game.rules(pl.faction).supplySummary(g, i))
-                    if (pl.gear.isNotEmpty()) add("Gear: " + pl.gear.joinToString { Cards[it].name })
-                }
-                Text(extra.joinToString(" · "), color = Reef.muted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 16.dp))
+/** Arrows and rings on the map that show what the choice so far would do. */
+private fun marksFor(pick: Pick, step: Step): List<MapMark> {
+    val kind = pick.kind ?: return emptyList()
+    val icon = Art.action(kind)
+    return when (step) {
+        is Step.Confirm -> {
+            val o = step.option
+            val ic = if (o.target != null && o.random) Icons.battle else icon
+            when {
+                o.reefs.size >= 2 -> listOf(MapMark(o.reefs[0], o.reefs[1], ic, strong = true, label = o.count?.toString()))
+                o.reefs.size == 1 -> listOf(MapMark(null, o.reefs[0], ic, strong = true, label = o.count?.toString()))
+                else -> emptyList()
             }
+        }
+        is Step.ChooseReef -> if (step.index == 1) {
+            step.reefs.map { MapMark(pick.reefs[0], it, if (step.reefs.size <= 4) icon else null, strong = false) }
+        } else {
+            step.reefs.map { MapMark(null, it, icon, strong = false) }
+        }
+        else -> when {
+            pick.reefs.size >= 2 -> listOf(MapMark(pick.reefs[0], pick.reefs[1], icon, strong = true))
+            pick.reefs.size == 1 -> listOf(MapMark(null, pick.reefs[0], icon, strong = true))
+            else -> emptyList()
         }
     }
 }
 
-private val reefHints = mapOf(
-    "Set up" to listOf("Tap where to set up."),
-    "Arrive" to listOf("Tap a gate for the new shark."),
-    "Hunt" to listOf("Tap the reef the sharks leave from.", "Tap where they go."),
-    "Move" to listOf("Tap the reef to move from.", "Tap where they go."),
-    "Battle" to listOf("Tap the reef to battle in."),
-    "Grow" to listOf("Tap a reef to grow coral in."),
-    "Spawn" to listOf("Tap the reef the polyps drift into."),
-)
-
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun StepControls(controller: GameController, d: Decision, step: Step, matching: List<Option>) {
-    val pick = OptionPicker.withKind(d.options, controller.pick)
+private fun Waiting(f: FactionId, what: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Portrait(f, 34.dp)
+        Spacer(Modifier.width(8.dp))
+        Text("${f.display} $what", color = Reef.muted, fontSize = 14.sp)
+    }
+}
+
+@Composable
+private fun Prompt(g: GameState, d: Decision) {
+    val f = g.players[d.player].faction
+    val phaseIcon = when {
+        g.pending.isNotEmpty() -> Icons.battle
+        g.phase == Phase.DAWN || g.phase == Phase.SETUP -> Icons.dawn
+        g.phase == Phase.DAY -> Icons.day
+        else -> Icons.endday
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Portrait(f, 34.dp)
+        Spacer(Modifier.width(6.dp))
+        ArtImage(phaseIcon, 26.dp)
+        Spacer(Modifier.width(6.dp))
+        Text(d.prompt.substringAfter(", "), color = Reef.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, lineHeight = 17.sp)
+    }
+}
+
+private fun reefHint(kind: String?, index: Int, twoReefs: Boolean): String = when {
+    kind == "Set up" -> "Tap a glowing reef to set up there."
+    kind == "Current" -> if (index == 0) "Tap the reef the current flows from." else "Tap the reef it flows to."
+    kind == "Sandbar" || kind == "Dig out" -> if (index == 0) "Tap one end of the channel." else "Tap the other end."
+    kind == "Move lure" -> if (index == 0) "Tap the lure to move." else "Tap where to hang it (or the same reef to change its offer)."
+    !twoReefs -> "Tap a glowing reef."
+    index == 0 -> "Tap the reef to go from."
+    else -> "Tap where they go. The arrows show every way."
+}
+
+@Composable
+private fun StepControls(controller: GameController, d: Decision, step: Step, pick: Pick, matching: List<Option>) {
+    val f = controller.game.players[d.player].faction
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        when (step) {
-            is Step.ChooseKind -> FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                for (k in step.kinds) Chip(k, primary = true) { controller.pick = Pick(kind = k) }
-            }
-            is Step.ChooseReef -> {
-                Text(reefHints[pick.kind]?.getOrNull(step.index) ?: "Tap a highlighted reef.", color = Reef.muted, fontSize = 13.sp)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    for (r in step.reefs.sortedBy { Board.name(it) }) Chip(Board.name(r)) { controller.pick = pick.copy(reefs = pick.reefs + r) }
+        if (step is Step.ChooseKind) {
+            // Every action as a card, with the ones that end a step last.
+            val kinds = step.kinds.sortedBy { if (it == EndDay.kind || it == "Done") 1 else 0 }
+            for (row in kinds.chunked(2)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    for (k in row) {
+                        ActionCard(f, k, d.options.count { it.kind == k }, selected = false, modifier = Modifier.weight(1f)) { controller.pick = Pick(kind = k) }
+                    }
+                    if (row.size == 1) Spacer(Modifier.weight(1f))
                 }
             }
-            is Step.ChooseCard -> Text("Choose a card from your hand below.", color = Reef.muted, fontSize = 13.sp)
-            is Step.ChooseTarget -> FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                for (t in step.targets) {
-                    Chip(if (t == null) "No battle" else "Battle ${t.display}", primary = t != null) {
-                        controller.pick = pick.copy(target = t, targetChosen = true)
+            return@Column
+        }
+        ActionCard(f, pick.kind ?: "", matching.size, selected = true, modifier = Modifier.fillMaxWidth())
+        when (step) {
+            is Step.ChooseReef -> {
+                Instruction(reefHint(pick.kind, step.index, matching.any { it.reefs.size > 1 }))
+                ChipRow {
+                    for (r in step.reefs.sortedBy { Board.name(it) }) {
+                        Chip(Board.name(r), image = Art.suit(controller.game.suitOf(r))) { controller.pick = pick.copy(reefs = pick.reefs + r) }
                     }
                 }
             }
-            is Step.ChooseVariant -> FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                for (v in step.variants) Chip(v) { controller.pick = pick.copy(variant = v) }
+            is Step.ChooseCard -> Instruction("Choose a card from your hand below.")
+            is Step.ChooseTarget -> {
+                Instruction("Which faction?")
+                ChipRow {
+                    for (t in step.targets) {
+                        if (t == null) Chip("No battle", image = Icons.move) { controller.pick = pick.copy(target = null, targetChosen = true) }
+                        else Chip(t.display, primary = true, faction = t) { controller.pick = pick.copy(target = t, targetChosen = true) }
+                    }
+                }
+            }
+            is Step.ChooseVariant -> {
+                Instruction("Which one?")
+                ChipRow { for (v in step.variants) Chip(v, image = variantImage(v)) { controller.pick = pick.copy(variant = v) } }
             }
             is Step.ChooseCount -> {
-                Text("How many?", color = Reef.muted, fontSize = 13.sp)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    for (n in step.counts) Chip("$n") { controller.pick = pick.copy(count = n) }
-                }
+                Instruction("How many?")
+                ChipRow { for (n in step.counts) Chip("$n", primary = n == step.counts.first()) { controller.pick = pick.copy(count = n) } }
             }
             is Step.Confirm -> Button(
                 onClick = { controller.apply(step.option) },
                 colors = ButtonDefaults.buttonColors(containerColor = Reef.current, contentColor = Reef.night),
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text(step.option.describe(), textAlign = TextAlign.Center) }
+            ) {
+                ArtImage(Art.action(step.option.kind), 24.dp)
+                Spacer(Modifier.width(8.dp))
+                Text(step.option.describe(), textAlign = TextAlign.Center)
+            }
+            is Step.ChooseKind -> {}
         }
-        if (controller.pick != Pick() && !(step is Step.ChooseKind)) {
-            TextButton(onClick = { controller.pick = Pick() }) { Text("Back", color = Reef.muted) }
-        } else if (matching.size == 1 && step !is Step.Confirm && step !is Step.ChooseKind) {
-            Text(matching.first().describe(), color = Reef.muted, fontSize = 12.sp)
+        if (OptionPicker.kinds(d.options).size > 1) {
+            TextButton(onClick = { controller.pick = Pick() }) { Text("‹ Choose another action", color = Reef.muted) }
+        } else if (controller.pick != Pick()) {
+            TextButton(onClick = { controller.pick = Pick() }) { Text("‹ Start over", color = Reef.muted) }
+        }
+    }
+}
+
+private fun variantImage(v: String) = when {
+    v in listOf("Treasure", "Shelter", "Glory") -> Art.lure(v)
+    Suit.entries.any { it.label == v } -> Art.suit(Suit.entries.first { it.label == v })
+    v.startsWith("Arm") -> Icons.reach
+    v.startsWith("Turtle") -> Portraits.turtle
+    else -> null
+}
+
+@Composable
+private fun Instruction(text: String) {
+    Text(text, color = Reef.ink, fontSize = 13.sp, fontStyle = FontStyle.Italic)
+}
+
+@Composable
+private fun Scoreboard(g: GameState, modifier: Modifier = Modifier, onOpen: (FactionId) -> Unit) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        g.players.forEachIndexed { i, pl ->
+            val turn = g.phase != Phase.OVER && g.current == i
+            Row(
+                Modifier.fillMaxWidth()
+                    .background(if (turn) Color(0xFF173F4A) else Color.Transparent, RoundedCornerShape(8.dp))
+                    .clickable { onOpen(pl.faction) }
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Portrait(pl.faction, 30.dp, ring = if (turn) 2.5.dp else 1.5.dp)
+                Spacer(Modifier.width(6.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        pl.faction.display + (if (pl.human) "" else " · bot"),
+                        color = Reef.ink, fontWeight = if (turn) FontWeight.Bold else FontWeight.Normal, fontSize = 13.sp,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    )
+                    val extra = buildList {
+                        pl.dominance?.let { add("Dominance: ${Cards[it].suit.label}") }
+                        add(Game.rules(pl.faction).supplySummary(g, i))
+                        if (pl.gear.isNotEmpty()) add("Gear: " + pl.gear.joinToString { Cards[it].name })
+                    }
+                    Text(extra.joinToString(" · "), color = Reef.muted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                VpBadge("${pl.vp}", 22.dp)
+            }
         }
     }
 }
@@ -245,9 +351,18 @@ private fun StepControls(controller: GameController, d: Decision, step: Step, ma
 @Composable
 private fun LastEvents(g: GameState) {
     val lines = g.log.takeLast(6).reversed()
-    Column(Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text("LATEST", color = Reef.muted, fontSize = 10.sp, letterSpacing = 1.sp)
-        for (l in lines) Text(l, color = Reef.muted, fontSize = 12.sp)
+    Column(Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        SectionTitle("Latest")
+        for (l in lines) {
+            val f = FactionId.entries.firstOrNull { l.startsWith(it.display + ":") }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (f != null) {
+                    Portrait(f, 18.dp, ring = 1.dp)
+                    Spacer(Modifier.width(5.dp))
+                }
+                Text(if (f != null) l.substringAfter(": ") else l, color = Reef.muted, fontSize = 12.sp)
+            }
+        }
     }
 }
 
@@ -258,24 +373,16 @@ private fun Hand(controller: GameController, selectable: Set<Int>, d: Decision?)
     if (g.players.none { it.human }) return
     val hand = g.players[viewer].hand
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text("${g.players[viewer].faction.display.uppercase()} HAND · ${hand.size}", color = Reef.muted, fontSize = 10.sp, letterSpacing = 1.sp)
+        SectionTitle("${g.players[viewer].faction.display} hand · ${hand.size}")
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             for (c in hand) {
-                val card = Cards[c]
                 val canPick = c in selectable
-                Column(
-                    Modifier
-                        .width(118.dp)
-                        .background(Reef.raised, RoundedCornerShape(8.dp))
-                        .border(if (canPick) 2.dp else 1.dp, if (canPick) Reef.accent else Reef.line, RoundedCornerShape(8.dp))
-                        .clickable(enabled = canPick && d != null) { controller.pick = OptionPicker.withKind(d!!.options, controller.pick).copy(card = c) }
-                        .padding(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(3.dp),
-                ) {
-                    Box(Modifier.fillMaxWidth().height(4.dp).background(Reef.suit(card.suit), RoundedCornerShape(2.dp)))
-                    Text(card.name, color = Reef.ink, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(card.describe(), color = Reef.muted, fontSize = 10.sp, maxLines = 3, overflow = TextOverflow.Ellipsis, lineHeight = 12.sp)
-                }
+                PlayingCard(
+                    c, highlighted = canPick,
+                    onClick = if (canPick && d != null) {
+                        { controller.pick = OptionPicker.withKind(d.options, controller.pick).copy(card = c) }
+                    } else null,
+                )
             }
         }
     }
@@ -284,8 +391,8 @@ private fun Hand(controller: GameController, selectable: Set<Int>, d: Decision?)
 @Composable
 private fun Handoff(f: FactionId, onReady: () -> Unit) {
     Box(Modifier.fillMaxSize().background(Reef.night).clickable(onClick = {}), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Box(Modifier.size(28.dp).background(Reef.faction(f), CircleShape))
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Portrait(f, 110.dp, ring = 3.dp)
             Text("Pass the phone to ${f.display}", color = Reef.ink, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
             Text("Everyone else, look away: the next screen shows ${Game.possessive(f.display)} hand.", color = Reef.muted)
             Button(onClick = onReady, colors = ButtonDefaults.buttonColors(containerColor = Reef.faction(f), contentColor = Reef.night)) {
@@ -295,19 +402,72 @@ private fun Handoff(f: FactionId, onReady: () -> Unit) {
     }
 }
 
+/** How the latest battle went: who fought, the dice, and the hits each side dealt. */
+@Composable
+internal fun BattlePopup(b: BattleReport, onClose: () -> Unit) {
+    Box(Modifier.fillMaxSize().background(Color(0x9906171D)).clickable(onClick = onClose), contentAlignment = Alignment.Center) {
+        Column(
+            Modifier.width(440.dp).background(Reef.surface, RoundedCornerShape(16.dp)).border(1.dp, Reef.line, RoundedCornerShape(16.dp)).padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text("Battle in ${Board.name(b.reef)}", color = Reef.ink, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                Side(b.attacker, "attack", b.attackerHits)
+                ArtImage(Icons.battle, 54.dp)
+                Side(b.defender, "defend", b.defenderHits)
+            }
+            if (b.dice.isNotEmpty()) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    for (v in b.dice) Die(v)
+                    Text("The attacker deals the higher die, the defender the lower, each capped by warriors there.", color = Reef.muted, fontSize = 11.sp, modifier = Modifier.width(230.dp))
+                }
+            }
+            for (n in b.notes) Text(n, color = Reef.muted, fontSize = 12.sp)
+            Text("Tap to close", color = Reef.muted, fontSize = 11.sp)
+        }
+    }
+}
+
+@Composable
+private fun Side(f: FactionId, verb: String, hits: Int) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Portrait(f, 62.dp, ring = 2.5.dp)
+        Text("${f.display} $verb", color = Reef.ink, fontSize = 12.sp)
+        Text("$hits hit${if (hits == 1) "" else "s"}", color = Reef.accent, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+/** A four-sided die showing 0 to 3. */
+@Composable
+private fun Die(v: Int) {
+    Box(
+        Modifier.size(40.dp).background(Color(0xFFF6F0E2), RoundedCornerShape(8.dp)).border(2.dp, Color(0xFF10222B), RoundedCornerShape(8.dp)),
+        contentAlignment = Alignment.Center,
+    ) { Text("$v", color = Color(0xFF10222B), fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+}
+
 @Composable
 private fun GameOver(g: GameState, onExit: () -> Unit, onRematch: () -> Unit) {
     val winner = g.winner?.let { g.players[it] }
     Box(Modifier.fillMaxSize().background(Color(0xE606171D)).clickable(onClick = {}), contentAlignment = Alignment.Center) {
         Column(
-            Modifier.background(Reef.surface, RoundedCornerShape(16.dp)).padding(28.dp),
+            Modifier.background(Reef.surface, RoundedCornerShape(16.dp)).padding(22.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            if (winner != null) Box(Modifier.size(28.dp).background(Reef.faction(winner.faction), CircleShape))
-            Text(if (winner != null) "${winner.faction.display} win" else "Game over", color = Reef.ink, fontSize = 30.sp, fontWeight = FontWeight.SemiBold)
+            if (winner != null) Portrait(winner.faction, 90.dp, ring = 3.dp)
+            Text(if (winner != null) "${winner.faction.display} win" else "Game over", color = Reef.ink, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
             Text(g.winText, color = Reef.muted)
-            Text(g.players.joinToString("   ") { "${it.faction.display} ${it.vp} VP" } + "   ·   ${g.round} rounds", color = Reef.ink)
+            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                for (pl in g.players.sortedByDescending { it.vp }) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Portrait(pl.faction, 36.dp)
+                        Text("${pl.vp} VP", color = Reef.ink, fontSize = 13.sp)
+                    }
+                }
+            }
+            Text("${g.round} rounds", color = Reef.muted, fontSize = 12.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedButton(onClick = onExit) { Text("Home") }
                 Button(onClick = onRematch, colors = ButtonDefaults.buttonColors(containerColor = Reef.current, contentColor = Reef.night)) { Text("Play again") }
@@ -317,25 +477,9 @@ private fun GameOver(g: GameState, onExit: () -> Unit, onRematch: () -> Unit) {
 }
 
 @Composable
-fun Chip(text: String, primary: Boolean = false, onClick: () -> Unit) {
-    Box(
-        Modifier
-            .background(if (primary) Reef.raised else Color.Transparent, RoundedCornerShape(50))
-            .border(1.dp, if (primary) Reef.current else Reef.line, RoundedCornerShape(50))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-    ) { Text(text, color = Reef.ink, fontSize = 14.sp) }
-}
-
-@Composable
 private fun SmallButton(text: String, onClick: () -> Unit) {
     Box(
-        Modifier.width(62.dp).border(1.dp, Reef.line, RoundedCornerShape(8.dp)).clickable(onClick = onClick).padding(vertical = 4.dp),
+        Modifier.width(56.dp).height(26.dp).border(1.dp, Reef.line, RoundedCornerShape(8.dp)).clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) { Text(text, color = Reef.muted, fontSize = 12.sp) }
-}
-
-@Composable
-fun Line() {
-    Box(Modifier.fillMaxWidth().height(1.dp).background(Reef.line))
 }

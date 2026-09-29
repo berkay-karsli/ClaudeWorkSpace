@@ -183,14 +183,21 @@ def pigment(name, color):
     return a
 
 
+def turban(a, ink):
+    """A small spiral shell, as worn by the hermit crabs' customers."""
+    a.add(blob([(30, 4), (37, 12), (42, 24), (39, 36), (28, 44), (14, 43), (6, 35), (9, 23), (19, 11)]),
+          fill=rad(22, 16, 32, (0, "#fff4de"), (0.5, "#ebbd7e"), (1, "#a5692f")), stroke=ink, width=2)
+    for pts in ([(12, 17), (24, 19), (36, 13)], [(8, 27), (24, 30), (41, 24)], [(8, 36), (22, 39), (40, 33)]):
+        a.line(smooth(pts, closed=False), "#9a6532", 1.6)
+    for pts in ([(18, 15), (26, 16.5)], [(15, 25), (28, 27)]):
+        a.add(taper(pts, 2.4, 1), fill="#ffffff", alpha=0.55)
+    a.add(ellipse(17, 38, 7, 4.6), fill="#5a3212", stroke=ink, width=1.4)
+    a.add(ellipse(17, 37.4, 4.2, 2.4), fill="#2a1406")
+
+
 def piece_shell():
     a = Art("piece_shell", 48, 48, "piece")
-    ink = "#4a2208"
-    a.add(blob([(8, 40), (10, 26), (20, 12), (32, 6), (40, 14), (40, 30), (30, 42)]),
-          fill=rad(28, 18, 30, (0, "#fff0d6"), (0.55, "#e8b777"), (1, "#a5692f")), stroke=ink, width=2)
-    for i, (p, q) in enumerate((((14, 34), (36, 12)), ((12, 28), (30, 10)), ((18, 40), (39, 20)))):
-        a.line(smooth([p, lerp(p, q, 0.5), q], closed=False), "#9a6532", 1.4, alpha=0.8)
-    a.add(taper([(16, 28), (22, 18), (30, 12)], 2.6, 1), fill="#ffffff", alpha=0.5)
+    turban(a, "#4a2208")
     return a
 
 
@@ -427,10 +434,7 @@ def _letgo(a):
 
 
 def _shell(a):
-    a.add(blob([(8, 42), (10, 26), (20, 12), (32, 6), (40, 14), (40, 30), (30, 42)]),
-          fill=rad(28, 18, 30, (0, "#fff0d6"), (0.55, "#e8b777"), (1, "#a5692f")), stroke=INK, width=2)
-    for p, q in (((14, 34), (36, 12)), ((12, 28), (30, 10)), ((18, 40), (39, 20))):
-        a.line(smooth([p, lerp(p, q, 0.5), q], closed=False), "#9a6532", 1.4)
+    turban(a, INK)
 
 
 def _price(a):
@@ -548,6 +552,20 @@ def _recruit(a):
     a.line("M34,11.5 V20.5 M29.5,16 H38.5", INK, 2.6)
 
 
+def _dawn(a):
+    a.add("M4,34 A20,20 0 0,1 44,34 Z", fill=rad(24, 34, 20, (0, "#fff6c0"), (1, "#ffb347")), stroke=INK, width=1.8)
+    for deg in (190, 220, 250, 290, 320, 350):
+        a.line(poly([arc_pt(24, 34, 23, deg), arc_pt(24, 34, 28, deg)], closed=False), "#ffd27a", 2.2)
+    a.add(smooth([(2, 36), (10, 33.5), (18, 36.5), (26, 33.5), (34, 36.5), (42, 33.5), (46, 36), (46, 44), (2, 44)]), fill="#3aa0c8", stroke=INK, width=1.4)
+    arrowhead(a, (24, 5), (24, 13), 9, "#fff3a0")
+
+
+def _day(a):
+    for deg in range(0, 360, 45):
+        a.add(taper([arc_pt(24, 24, 13, deg), arc_pt(24, 24, 21, deg)], 4, 1.6), fill="#ffd27a", stroke=INK, width=1.2)
+    a.add(circle(24, 24, 11), fill=rad(21, 21, 13, (0, "#fffbe0"), (1, "#ffc23a")), stroke=INK, width=1.8)
+
+
 ICONS = {
     "move": _move, "swim": _swim, "hunt": _hunt, "battle": _battle, "bite": _bite, "snap": _snap, "arrive": _arrive,
     "spawn": _spawn, "grow": _grow, "build": _build, "craft": _craft, "card": _card, "extra": _extra, "ambush": _ambush,
@@ -555,7 +573,7 @@ ICONS = {
     "drift": _drift, "graze": _graze, "feed": _feed, "lay": _lay, "attach": _attach, "letgo": _letgo, "shell": _shell,
     "price": _price, "lure": _lure, "steal": _steal, "recoil": _recoil, "order": _order, "reach": _reach, "grab": _grab,
     "mantle": _mantle, "paint": _paint, "dig": _dig, "leave": _leave, "sandbar": _sandbar, "island": _island,
-    "slither": _slither, "setup": _setup, "nest": _nest, "market": _market, "recruit": _recruit,
+    "slither": _slither, "setup": _setup, "nest": _nest, "market": _market, "recruit": _recruit, "dawn": _dawn, "day": _day,
 }
 
 

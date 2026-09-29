@@ -29,6 +29,11 @@ jobs:
         run: |
           python3 docs/build_field_guide.py
           git diff --exit-code -- docs/field-guide.html engine/src/main/resources/plates.json
+      # The app's pictures are generated from the art sources too.
+      - name: Check the app's art matches the art sources
+        run: |
+          (cd art && python3 build_art.py)
+          test -z "$(git status --porcelain -- art/svg app/src/main/kotlin/com/reef/app/ui/art/ArtLibrary.kt)"
       - name: Test the engine and build the APK
         run: |
           ./gradlew :engine:test :app:assembleDebug

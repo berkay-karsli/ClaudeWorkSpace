@@ -222,7 +222,7 @@ def taper(points, w0, w1, k=8, ease=1.0, start_cap=True):
             cap.append((start[0] - (sn[0] * c - sd[0] * s) * w0 / 2 + 0, start[1] - (sn[1] * c - sd[1] * s) * w0 / 2))
     outline = left + tip + right[::-1] + cap
     # Thin the points so the path stays small, then smooth.
-    return smooth(_thin(outline, 0.9), closed=True)
+    return smooth(_thin(outline, 1.6), closed=True)
 
 
 def _thin(pts, min_dist):

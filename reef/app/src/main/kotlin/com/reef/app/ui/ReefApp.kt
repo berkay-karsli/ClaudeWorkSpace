@@ -2,14 +2,18 @@ package com.reef.app.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -31,8 +35,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.reef.engine.FactionId
@@ -93,11 +100,20 @@ fun ReefApp(store: SaveStore, backHandler: @Composable (enabled: Boolean, onBack
 
 @Composable
 internal fun HomeScreen(saved: GameState?, onContinue: (GameState) -> Unit, onNew: () -> Unit, onHowToPlay: () -> Unit) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text("Reef", color = Reef.ink, fontSize = 64.sp, fontStyle = FontStyle.Italic, fontWeight = FontWeight.Light)
-            Text("An asymmetric strategy game on a coral reef.", color = Reef.muted)
-            Spacer(Modifier.height(8.dp))
+    Box(
+        Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF1F7C92), Color(0xFF0A3347), Color(0xFF051B26)))),
+        contentAlignment = Alignment.Center,
+    ) {
+        // A ring of all fourteen factions around the title.
+        Row(Modifier.align(Alignment.TopCenter).padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            for (f in FactionId.entries.take(7)) Portrait(f, 44.dp)
+        }
+        Row(Modifier.align(Alignment.BottomCenter).padding(bottom = 14.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            for (f in FactionId.entries.drop(7)) Portrait(f, 44.dp)
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("Reef", color = Reef.ink, fontSize = 60.sp, fontStyle = FontStyle.Italic, fontWeight = FontWeight.Light)
+            Text("Fourteen creatures. One reef. Nobody plays by the same rules.", color = Reef.ink.copy(alpha = 0.8f))
             if (saved != null) {
                 Button(onClick = { onContinue(saved) }, colors = ButtonDefaults.buttonColors(containerColor = Reef.current, contentColor = Reef.night)) {
                     Text("Continue: round ${saved.round}, " + saved.players.joinToString(" vs ") { "${it.faction.display} ${it.vp}" })
@@ -115,58 +131,138 @@ internal fun HomeScreen(saved: GameState?, onContinue: (GameState) -> Unit, onNe
     }
 }
 
-/** Phase 1 has two factions. Each can be played by a person or a bot, and either can go first. */
+/** The lowest total reach each table size needs, so somebody can always check a runaway leader. */
+private val REACH_NEEDED = mapOf(2 to 12, 3 to 15, 4 to 18)
+
+/** Choose 2 to 4 factions, who plays each (a person or a bot), and the order of play. */
 @Composable
-internal fun SetupScreen(onStart: (List<Seat>) -> Unit, onBack: () -> Unit) {
-    val factions = remember { mutableStateListOf(FactionId.SHARKS, FactionId.CORAL) }
-    val human = remember { mutableStateListOf(true, false) }
-    Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        // The buttons sit beside the title so a short landscape screen never hides them.
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("New game", color = Reef.ink, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
-                Text(
-                    if (human.all { it }) "Pass-and-play: a cover screen hides each hand while the phone changes hands."
-                    else if (human.none { it }) "Bots only: watch the two factions play each other."
-                    else "You against a bot. The faction on the left goes first.",
-                    color = Reef.muted, fontSize = 13.sp,
-                )
-            }
-            OutlinedButton(onClick = onBack) { Text("Back", color = Reef.ink) }
-            OutlinedButton(onClick = {
-                factions.reverse()
-                human.reverse()
-            }) { Text("Swap order", color = Reef.ink) }
-            Button(
-                onClick = { onStart(factions.indices.map { Seat(factions[it], human[it]) }) },
-                colors = ButtonDefaults.buttonColors(containerColor = Reef.current, contentColor = Reef.night),
-            ) { Text("Start") }
+internal fun SetupScreen(onStart: (List<Seat>) -> Unit, onBack: () -> Unit, initial: List<FactionId> = listOf(FactionId.SHARKS, FactionId.CORAL)) {
+    val chosen = remember { mutableStateListOf(*initial.toTypedArray()) }
+    val human = remember { mutableStateListOf(*initial.mapIndexed { i, _ -> i == 0 }.toTypedArray()) }
+    var info by remember { mutableStateOf<FactionId?>(null) }
+
+    fun toggle(f: FactionId) {
+        val i = chosen.indexOf(f)
+        if (i >= 0) {
+            chosen.removeAt(i); human.removeAt(i)
+        } else if (chosen.size < 4) {
+            chosen.add(f); human.add(chosen.size == 1)
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            factions.forEachIndexed { i, f ->
-                val plate = Plates.of(f)
-                Column(
-                    Modifier.weight(1f).background(Reef.surface, RoundedCornerShape(12.dp)).border(1.dp, Reef.line, RoundedCornerShape(12.dp)).padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(14.dp).background(Reef.faction(f), CircleShape))
-                        Spacer(Modifier.width(8.dp))
-                        Text(plate.name, color = Reef.ink, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
-                        Spacer(Modifier.weight(1f))
-                        Text(if (i == 0) "goes first" else "goes second", color = Reef.muted, fontSize = 12.sp)
-                    }
-                    Text("“${plate.tagline}”", color = Reef.ink, fontStyle = FontStyle.Italic)
-                    Text(plate.idea, color = Reef.muted, fontSize = 13.sp)
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Chip("Person", primary = human[i]) { human[i] = true }
-                        Chip("Bot", primary = !human[i]) { human[i] = false }
-                    }
+    }
+
+    val reach = chosen.sumOf { Plates.of(it).reach }
+    val needed = REACH_NEEDED[chosen.size]
+    val problem = when {
+        chosen.size < 2 -> "Choose at least 2 factions."
+        FactionId.REMORAS in chosen && chosen.size < 3 -> "Remoras need at least two other factions to ride."
+        needed != null && reach < needed -> "Reach $reach of $needed: too few factions attack, so nobody could stop a runaway leader. Add a hunter such as the Sharks, Lionfish or Octopus."
+        else -> null
+    }
+
+    Row(Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Choose 2 to 4 factions", color = Reef.ink, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+            for (row in FactionId.entries.chunked(5)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    for (f in row) FactionTile(f, chosen.indexOf(f), Modifier.weight(1f), onInfo = { info = f }) { toggle(f) }
+                    repeat(5 - row.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
         }
+        Column(Modifier.width(290.dp).fillMaxHeight().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("The table", color = Reef.ink, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                OutlinedButton(onClick = onBack) { Text("Back", color = Reef.ink) }
+            }
+            chosen.forEachIndexed { i, f ->
+                Row(
+                    Modifier.fillMaxWidth().background(Reef.surface, RoundedCornerShape(10.dp)).padding(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("${i + 1}", color = Reef.muted, fontSize = 13.sp, modifier = Modifier.width(14.dp))
+                    Portrait(f, 34.dp)
+                    Spacer(Modifier.width(6.dp))
+                    Text(f.display, color = Reef.ink, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                    Toggle("Person", human[i]) { human[i] = true }
+                    Spacer(Modifier.width(4.dp))
+                    Toggle("Bot", !human[i]) { human[i] = false }
+                    if (i > 0) {
+                        Spacer(Modifier.width(4.dp))
+                        Text("▲", color = Reef.muted, fontSize = 14.sp, modifier = Modifier.clickable {
+                            chosen.add(i - 1, chosen.removeAt(i)); human.add(i - 1, human.removeAt(i))
+                        }.padding(4.dp))
+                    }
+                }
+            }
+            Text(
+                when {
+                    human.isEmpty() -> ""
+                    human.all { it } -> "Pass-and-play: a cover screen hides each hand while the phone changes hands."
+                    human.none { it } -> "Bots only: watch them play each other."
+                    else -> "Bots play the others. Number 1 goes first; ▲ moves a faction up."
+                },
+                color = Reef.muted, fontSize = 12.sp,
+            )
+            if (chosen.size >= 2) {
+                val ok = needed == null || reach >= needed
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Reach $reach", color = if (ok) Color(0xFF8BE07A) else Reef.accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Text("  needs ${needed ?: "-"} for ${chosen.size} factions", color = Reef.muted, fontSize = 12.sp)
+                }
+            }
+            if (problem != null) Text(problem, color = Reef.accent, fontSize = 12.sp)
+            Button(
+                onClick = { onStart(chosen.indices.map { Seat(chosen[it], human[it]) }) },
+                enabled = problem == null,
+                colors = ButtonDefaults.buttonColors(containerColor = Reef.current, contentColor = Reef.night),
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text("Start") }
+        }
     }
+    info?.let { f -> RulesDialog(listOf(f)) { info = null } }
+}
+
+@Composable
+private fun FactionTile(f: FactionId, seat: Int, modifier: Modifier, onInfo: () -> Unit, onClick: () -> Unit) {
+    val plate = Plates.of(f)
+    val selected = seat >= 0
+    val shape = RoundedCornerShape(12.dp)
+    Box(modifier) {
+        Column(
+            Modifier.fillMaxWidth()
+                .background(if (selected) Reef.faction(f).copy(alpha = 0.22f) else Reef.surface, shape)
+                .border(if (selected) 2.dp else 1.dp, if (selected) Reef.faction(f) else Reef.line, shape)
+                .clickable(onClick = onClick)
+                .padding(vertical = 6.dp, horizontal = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Portrait(f, 50.dp)
+            Text(plate.name, color = Reef.ink, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, maxLines = 1)
+            Text(plate.role, color = Reef.muted, fontSize = 10.sp, maxLines = 1)
+            Text("●".repeat(plate.complexity) + "○".repeat(4 - plate.complexity), color = Reef.faction(f), fontSize = 9.sp)
+        }
+        if (selected) {
+            Box(
+                Modifier.align(Alignment.TopStart).offset(x = 4.dp, y = 4.dp).size(20.dp).background(Reef.faction(f), CircleShape),
+                contentAlignment = Alignment.Center,
+            ) { Text("${seat + 1}", color = Reef.night, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+        }
+        Box(
+            Modifier.align(Alignment.TopEnd).offset(x = (-4).dp, y = 4.dp).size(20.dp).border(1.dp, Reef.line, CircleShape).clickable(onClick = onInfo),
+            contentAlignment = Alignment.Center,
+        ) { Text("i", color = Reef.muted, fontSize = 12.sp, fontStyle = FontStyle.Italic) }
+    }
+}
+
+@Composable
+private fun Toggle(text: String, on: Boolean, onClick: () -> Unit) {
+    Box(
+        Modifier.height(26.dp)
+            .background(if (on) Reef.current else Color.Transparent, RoundedCornerShape(50))
+            .border(1.dp, if (on) Reef.current else Reef.line, RoundedCornerShape(50))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp),
+        contentAlignment = Alignment.Center,
+    ) { Text(text, color = if (on) Reef.night else Reef.muted, fontSize = 11.sp) }
 }
