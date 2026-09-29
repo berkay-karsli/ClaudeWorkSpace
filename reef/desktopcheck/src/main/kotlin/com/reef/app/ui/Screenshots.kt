@@ -1,8 +1,12 @@
 package com.reef.app.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.ImageComposeScene
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Density
 import com.reef.engine.Bot
 import com.reef.engine.FactionId
@@ -26,7 +30,10 @@ private object MemoryStore : SaveStore {
 @OptIn(ExperimentalComposeUiApi::class)
 private fun shot(out: File, name: String, content: @Composable () -> Unit) {
     val d = 2f
-    val scene = ImageComposeScene(width = (800 * d).toInt(), height = (370 * d).toInt(), density = Density(d)) { ReefTheme { content() } }
+    val scene = ImageComposeScene(width = (800 * d).toInt(), height = (370 * d).toInt(), density = Density(d)) {
+        // The same dark ground ReefApp puts behind every screen.
+        ReefTheme { Box(Modifier.fillMaxSize().background(Reef.night)) { content() } }
+    }
     scene.render(0)
     val image = scene.render(500_000_000L)
     File(out, "$name.png").writeBytes(image.encodeToData(EncodedImageFormat.PNG)!!.bytes)

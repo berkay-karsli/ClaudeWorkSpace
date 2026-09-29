@@ -121,29 +121,33 @@ fun GameScreen(controller: GameController, onExit: () -> Unit, onRematch: () -> 
                 onReefTap = { reef -> controller.pick = OptionPicker.withKind(d!!.options, controller.pick).let { it.copy(reefs = it.reefs + reef) } },
                 modifier = Modifier.weight(1f).fillMaxHeight(),
             )
+            // A landscape phone is short: the scoreboard stays on top, and everything below scrolls,
+            // with the current choice first so it is always in view.
             Column(
                 Modifier.width(330.dp).fillMaxHeight().background(Reef.surface).padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Scoreboard(g)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Scoreboard(g, Modifier.weight(1f))
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        SmallButton("Rules") { showRules = true }
+                        SmallButton("Log") { showLog = true }
+                        SmallButton("Menu") { onExit() }
+                    }
+                }
                 Line()
-                Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     when {
                         d == null -> Text(g.winText, color = Reef.ink, fontWeight = FontWeight.SemiBold)
-                        !humanTurn -> Text("${g.players[d.player].faction.display} (bot) are thinking…", color = Reef.muted)
+                        !humanTurn -> Text("The bot is playing ${g.players[d.player].faction.display}…", color = Reef.muted)
                         needsHandoff -> Text("Waiting for ${g.players[d.player].faction.display}.", color = Reef.muted)
                         else -> {
                             Text(d.prompt, color = Reef.ink, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                             StepControls(controller, d, step!!, matching)
                         }
                     }
+                    Hand(controller, (step as? Step.ChooseCard)?.cards ?: emptySet(), d)
                     LastEvents(g)
-                }
-                Hand(controller, (step as? Step.ChooseCard)?.cards ?: emptySet(), d)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    SmallButton("Rules") { showRules = true }
-                    SmallButton("Log") { showLog = true }
-                    SmallButton("Menu") { onExit() }
                 }
             }
         }
@@ -155,27 +159,28 @@ fun GameScreen(controller: GameController, onExit: () -> Unit, onRematch: () -> 
 }
 
 @Composable
-private fun Scoreboard(g: GameState) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+private fun Scoreboard(g: GameState, modifier: Modifier = Modifier) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         g.players.forEachIndexed { i, pl ->
             val turn = g.phase != Phase.OVER && g.current == i
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(12.dp).background(Reef.faction(pl.faction), CircleShape))
-                Spacer(Modifier.width(8.dp))
-                Column(Modifier.weight(1f)) {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(10.dp).background(Reef.faction(pl.faction), CircleShape))
+                    Spacer(Modifier.width(6.dp))
                     Text(
-                        pl.faction.display + (if (pl.human) "" else " (bot)") + (if (turn) "  ◀ turn" else ""),
+                        pl.faction.display + (if (pl.human) "" else " (bot)") + (if (turn) " ◀" else ""),
                         color = Reef.ink, fontWeight = if (turn) FontWeight.Bold else FontWeight.Normal, fontSize = 14.sp,
+                        modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )
-                    val extra = buildList {
-                        add(Game.rules(pl.faction).supplySummary(g, i))
-                        pl.dominance?.let { add("Dominance: ${Cards[it].suit.label}") }
-                        if (pl.gear.isNotEmpty()) add("Gear: " + pl.gear.joinToString { Cards[it].name })
-                    }
-                    Text(extra.joinToString(" · "), color = Reef.muted, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text("${pl.vp}", color = Reef.ink, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text(" VP", color = Reef.muted, fontSize = 11.sp)
                 }
-                Text("${pl.vp}", color = Reef.ink, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                Text(" VP", color = Reef.muted, fontSize = 11.sp)
+                val extra = buildList {
+                    pl.dominance?.let { add("Dominance: ${Cards[it].suit.label}") }
+                    add(Game.rules(pl.faction).supplySummary(g, i))
+                    if (pl.gear.isNotEmpty()) add("Gear: " + pl.gear.joinToString { Cards[it].name })
+                }
+                Text(extra.joinToString(" · "), color = Reef.muted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 16.dp))
             }
         }
     }
@@ -322,8 +327,9 @@ fun Chip(text: String, primary: Boolean = false, onClick: () -> Unit) {
 @Composable
 private fun SmallButton(text: String, onClick: () -> Unit) {
     Box(
-        Modifier.border(1.dp, Reef.line, RoundedCornerShape(8.dp)).clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 6.dp),
-    ) { Text(text, color = Reef.muted, fontSize = 13.sp) }
+        Modifier.width(62.dp).border(1.dp, Reef.line, RoundedCornerShape(8.dp)).clickable(onClick = onClick).padding(vertical = 4.dp),
+        contentAlignment = Alignment.Center,
+    ) { Text(text, color = Reef.muted, fontSize = 12.sp) }
 }
 
 @Composable

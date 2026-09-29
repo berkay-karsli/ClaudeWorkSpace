@@ -121,11 +121,30 @@ internal fun SetupScreen(onStart: (List<Seat>) -> Unit, onBack: () -> Unit) {
     val factions = remember { mutableStateListOf(FactionId.SHARKS, FactionId.CORAL) }
     val human = remember { mutableStateListOf(true, false) }
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("New game", color = Reef.ink, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
-        Text("Choose who plays each faction. The one on the left goes first.", color = Reef.muted)
+        // The buttons sit beside the title so a short landscape screen never hides them.
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("New game", color = Reef.ink, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
+                Text(
+                    if (human.all { it }) "Pass-and-play: a cover screen hides each hand while the phone changes hands."
+                    else if (human.none { it }) "Bots only: watch the two factions play each other."
+                    else "You against a bot. The faction on the left goes first.",
+                    color = Reef.muted, fontSize = 13.sp,
+                )
+            }
+            OutlinedButton(onClick = onBack) { Text("Back", color = Reef.ink) }
+            OutlinedButton(onClick = {
+                factions.reverse()
+                human.reverse()
+            }) { Text("Swap order", color = Reef.ink) }
+            Button(
+                onClick = { onStart(factions.indices.map { Seat(factions[it], human[it]) }) },
+                colors = ButtonDefaults.buttonColors(containerColor = Reef.current, contentColor = Reef.night),
+            ) { Text("Start") }
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             factions.forEachIndexed { i, f ->
                 val plate = Plates.of(f)
@@ -149,23 +168,5 @@ internal fun SetupScreen(onStart: (List<Seat>) -> Unit, onBack: () -> Unit) {
                 }
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-            OutlinedButton(onClick = onBack) { Text("Back", color = Reef.ink) }
-            OutlinedButton(onClick = {
-                factions.reverse()
-                human.reverse()
-            }) { Text("Swap who goes first", color = Reef.ink) }
-            Spacer(Modifier.weight(1f))
-            Button(
-                onClick = { onStart(factions.indices.map { Seat(factions[it], human[it]) }) },
-                colors = ButtonDefaults.buttonColors(containerColor = Reef.current, contentColor = Reef.night),
-            ) { Text("Start") }
-        }
-        Text(
-            if (human.all { it }) "Pass-and-play: a cover screen hides each hand while the phone changes hands."
-            else if (human.none { it }) "Bots only: watch the two factions play each other."
-            else "You against a bot.",
-            color = Reef.muted, fontSize = 13.sp,
-        )
     }
 }
