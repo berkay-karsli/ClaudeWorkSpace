@@ -7,7 +7,7 @@ import kotlin.math.min
 data class Seat(val faction: FactionId, val human: Boolean)
 
 /** What removed a piece, for the rules that care (stings score for jellyfish, snaps for anglers...). */
-enum class Source { BATTLE, AMBUSH, VENOM, SNAP, STING, GORGE, BAIT_BALL }
+enum class Source { BATTLE, AMBUSH, VENOM, SNAP, STING, GORGE, BAIT_BALL, COIL }
 
 /** Bookkeeping for one attack: a turtle shell ignores its first hit, remora scraps pay once. */
 class AttackCtx {
@@ -99,6 +99,7 @@ object Game {
                 if (g.players[p].faction == FactionId.SARDINES && g.reefs[pending.reef].warriors(FactionId.SARDINES) > 0) {
                     options += neighbors(g, pending.reef, FactionId.SARDINES).map { BaitBall(it) }
                 }
+                options += OctopusRules.inkOptions(g, p, pending.reef)
                 options += NoAmbush
                 Decision(p, "$name: $a attack you in ${Board.name(pending.reef)}. How do you defend?", options)
             }
@@ -134,7 +135,12 @@ object Game {
         when (pending) {
             is DefendPending -> {
                 g.pending.removeAt(g.pending.lastIndex)
-                resolveBattle(g, pending.attacker, pending.player, pending.reef, (o as? PlayAmbush)?.cardId, (o as? BaitBall)?.to, pending.snap)
+                if (o is InkCloud) {
+                    OctopusRules.ink(g, pending.player, pending.attacker, pending.reef, o)
+                    if (pending.snap > 0) AnglersRules.sinkBack(g, pending.reef)
+                } else {
+                    resolveBattle(g, pending.attacker, pending.player, pending.reef, (o as? PlayAmbush)?.cardId, (o as? BaitBall)?.to, pending.snap)
+                }
             }
             is ShopPending -> when (o) {
                 is BuyShell -> g.pending.add(PayPending(pending.player, o.reef, CrabsRules.price(g)))
@@ -165,7 +171,7 @@ object Game {
             if (r.canDig) out += digOptions(g, p)
         }
         out += r.freeDayOptions(g, p)
-        if (r.canCraft) out += pl.hand.filter { Cards[it].kind == CardKind.GEAR && craftPayment(g, p, Cards[it].cost) != null }.map { Craft(it) }
+        out += pl.hand.filter { Cards[it].kind == CardKind.GEAR && craftPayment(g, p, Cards[it].cost) != null }.map { Craft(it) }
         if (r.actionsPerDay != null && !g.turn.surgeUsed) out += pl.hand.map { Surge(it) }
         if (pl.dominance == null && pl.vp >= DOMINANCE_MIN_VP) out += pl.hand.filter { Cards[it].kind == CardKind.DOMINANCE }.map { PlayDominance(it) }
         if (r.canEndDay(g, p)) out += EndDay
@@ -177,7 +183,9 @@ object Game {
         when (o) {
             is Craft -> {
                 val card = Cards[o.cardId]
-                for (reef in craftPayment(g, p, card.cost)!!) g.turn.crafted[reef] = (g.turn.crafted[reef] ?: 0) + 1
+                for (unit in craftPayment(g, p, card.cost)!!) {
+                    if (unit.spend) rules(g, p).spendCraftUnit(g, p, unit) else g.turn.use("craft:${unit.key}")
+                }
                 pl.hand.remove(o.cardId)
                 pl.gear.add(o.cardId)
                 log(g, "${pl.faction.display}: craft ${card.name}.")
@@ -383,6 +391,7 @@ object Game {
                 g.turn.use(key)
                 draw(g, p, 1)
                 log(g, "${f.display}: take the Treasure lure's bait in ${Board.name(to)} and draw a card.")
+                AnglersRules.hook(g, f)
             }
         }
         if (f != FactionId.JELLYFISH && g.inGame(FactionId.JELLYFISH) && g.reefs[to].warriors(FactionId.JELLYFISH) >= 2) {
@@ -444,7 +453,7 @@ object Game {
         }
         if (snap > 0) g.reefs[reef].addWarriors(FactionId.ANGLERS, snap)
         val bait = defender == FactionId.SARDINES && g.reefs[reef].warriors(defender) > 0
-        if (ambushCards(g, d, reef).isNotEmpty() || bait) {
+        if (ambushCards(g, d, reef).isNotEmpty() || bait || OctopusRules.inkOptions(g, d, reef).isNotEmpty()) {
             g.pending.add(DefendPending(d, a, reef, snap))
             return
         }
@@ -508,7 +517,7 @@ object Game {
         }
         val r1 = g.nextInt(4)
         val r2 = g.nextInt(4)
-        val attackerCap = rules(fa).hitWeight * rs.warriors(fa)
+        val attackerCap = rules(fa).attackCap(g, a, reef)
         val defenderWarriors = rs.warriors(fd)
         val defenderCap = rules(fd).hitWeight * defenderWarriors + rules(fd).defenseCapBonus(g, d, reef)
         var attackerHits = min(max(r1, r2), attackerCap)
@@ -518,6 +527,11 @@ object Game {
             notes += "${fd.display} have no warriors here: 1 extra hit"
         }
         attackerHits += gearCount(g, a, GearEffect.BATTLE_HIT)
+        val riders = RemorasRules.pileOn(g, fa, reef)
+        if (riders > 0) {
+            attackerHits += riders
+            notes += "Riding remoras pile on: $riders extra hit${if (riders == 1) "" else "s"}"
+        }
         attackerHits = max(0, attackerHits - gearCount(g, d, GearEffect.DEFENSE))
         log(g, "Dice: $r1 and $r2. Hits: ${fa.display} $attackerHits, ${fd.display} $defenderHits.")
         val source = if (snap > 0) Source.SNAP else Source.BATTLE
@@ -555,8 +569,8 @@ object Game {
             var idx = rs.pieces.indexOfFirst { it.owner == f && !it.type.building }
             if (idx < 0) idx = rs.pieces.indexOfFirst { it.owner == f && it.type.building }
             if (idx < 0) break
-            val piece = rs.pieces.removeAt(idx)
-            r.pieceRemoved(g, victim, piece)
+            val piece = rs.pieces[idx]
+            removePiece(g, reef, piece)
             left--
             pieces++
             log(g, "${g.players[by].faction.display}: destroy ${possessive(f.display)} ${piece.type.label} in ${Board.name(reef)}.")
@@ -566,6 +580,32 @@ object Game {
         if (w + pieces > 0) RemorasRules.scraps(g, by, victim, ctx)
         return w
     }
+
+    /**
+     * Takes [piece] off the map in [reef] and gives it back to its owner. When another faction's
+     * building goes, crabs in the reef move a market into the empty slot.
+     */
+    fun removePiece(g: GameState, reef: Int, piece: Piece) {
+        check(g.reefs[reef].pieces.remove(piece)) { "No ${piece.type.label} in ${Board.name(reef)}" }
+        val owner = piece.owner
+        if (owner != null && g.inGame(owner)) rules(owner).pieceRemoved(g, g.player(owner), piece)
+        if (piece.type.building) CrabsRules.vacancy(g, reef, piece)
+    }
+
+    /**
+     * Pushes [n] of [victim]'s warriors from [from] to [to] for [by]. It counts as the victim's
+     * own move: stings, riders and lures all treat it that way.
+     */
+    fun push(g: GameState, by: Int, victim: Int, from: Int, to: Int, n: Int) {
+        val f = g.players[victim].faction
+        log(g, "${g.players[by].faction.display}: push $n ${rules(f).warriorNoun(n)} of the ${f.display} from ${Board.name(from)} to ${Board.name(to)}.")
+        rules(f).displace(g, victim, from, to, n)
+    }
+
+    /** The factions [by] may push out of [reef], each with where they can go. */
+    fun pushTargets(g: GameState, by: Int, reef: Int): List<Pair<Int, List<Int>>> = g.players.indices.filter { q ->
+        q != by && g.reefs[reef].warriors(g.players[q].faction) > 0 && rules(g, q).pushable(g, q, reef)
+    }.map { q -> q to neighbors(g, reef, g.players[q].faction) }.filter { it.second.isNotEmpty() }
 
     /** Warriors lost to an attack without hits (a bait ball): still an attack for Blood and scraps. */
     private fun removeByAttack(g: GameState, by: Int, victim: Int, reef: Int, n: Int, source: Source, ctx: AttackCtx) {
@@ -585,6 +625,7 @@ object Game {
             Source.STING -> scoreVp(g, by, n, "stinging")
             Source.GORGE -> scoreVp(g, by, n, "gorging")
             Source.SNAP -> AnglersRules.eat(g, by, n)
+            Source.COIL -> SnakeRules.grow(g, by, n)
             else -> {}
         }
     }
@@ -623,22 +664,34 @@ object Game {
 
     fun gearCount(g: GameState, p: Int, effect: GearEffect): Int = g.players[p].gear.count { Cards[it].effect == effect }
 
-    /**
-     * Which reefs' buildings would pay [cost], or null if it can't be paid. Each building crafts
-     * once per turn with its reef's suit; [Suit.MOON] in a cost accepts any suit.
-     */
-    fun craftPayment(g: GameState, p: Int, cost: List<Suit>): List<Int>? {
-        val f = g.players[p].faction
-        val units = mutableListOf<Pair<Int, Suit>>()
-        for (reef in g.reefs.indices) {
-            val free = g.reefs[reef].buildingsOf(f) - (g.turn.crafted[reef] ?: 0)
-            repeat(max(0, free)) { units += reef to g.suitOf(reef) }
+    /** [p]'s crafting pieces that haven't paid yet this turn. */
+    fun craftUnits(g: GameState, p: Int): List<CraftUnit> {
+        val all = rules(g, p).craftUnits(g, p)
+        val taken = mutableMapOf<String, Int>()
+        return all.filter { u ->
+            if (u.spend) return@filter true
+            val t = taken.getOrPut(u.key) { g.turn.used("craft:${u.key}") }
+            if (t > 0) {
+                taken[u.key] = t - 1
+                false
+            } else {
+                true
+            }
         }
-        val used = mutableListOf<Int>()
+    }
+
+    /**
+     * The crafting pieces that would pay [cost], or null if it can't be paid. Each piece pays
+     * its suit once per turn; a [Suit.MOON] piece pays any suit, and a [Suit.MOON] cost accepts
+     * any piece. Pieces that last are used before pieces that are used up.
+     */
+    fun craftPayment(g: GameState, p: Int, cost: List<Suit>): List<CraftUnit>? {
+        val pool = craftUnits(g, p).toMutableList()
+        val used = mutableListOf<CraftUnit>()
         for (suit in cost.sortedBy { it == Suit.MOON }) {
-            val i = units.indexOfFirst { suit == Suit.MOON || it.second == suit }
-            if (i < 0) return null
-            used += units.removeAt(i).first
+            val i = pool.indices.filter { suit == Suit.MOON || pool[it].suit == suit || pool[it].suit == Suit.MOON }
+                .minByOrNull { (if (pool[it].suit == Suit.MOON) 2 else 0) + (if (pool[it].spend) 1 else 0) } ?: return null
+            used += pool.removeAt(i)
         }
         return used
     }

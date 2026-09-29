@@ -13,8 +13,6 @@ interface FactionRules {
     /** How many hits each warrior piece can deal in a battle. */
     val hitWeight: Int get() = 1
 
-    /** Only factions with buildings craft. */
-    val canCraft: Boolean get() = false
 
     /** Day actions per turn, or null when the faction's Day isn't counted in actions. */
     val actionsPerDay: Int? get() = null
@@ -70,6 +68,24 @@ interface FactionRules {
     /** Whether this faction's pieces in [reef] can't be attacked at all. */
     fun immune(g: GameState, p: Int, reef: Int): Boolean = false
 
+    /**
+     * The faction's crafting pieces on the map, whether or not they have paid this turn. By
+     * default each building pays its reef's suit.
+     */
+    fun craftUnits(g: GameState, p: Int): List<CraftUnit> = buildingUnits(g, p)
+
+    /** Uses up a crafting piece that is spent when it pays. */
+    fun spendCraftUnit(g: GameState, p: Int, unit: CraftUnit) {}
+
+    /** The most hits this faction's warriors in [reef] can deal when it attacks. */
+    fun attackCap(g: GameState, p: Int, reef: Int): Int = hitWeight * g.reefs[reef].warriors(id)
+
+    /** Whether another faction can push this faction's warriors out of [reef]. */
+    fun pushable(g: GameState, p: Int, reef: Int): Boolean = !immune(g, p, reef)
+
+    /** Moves [n] of this faction's warriors from [from] to [to] because another faction pushed them. */
+    fun displace(g: GameState, p: Int, from: Int, to: Int, n: Int) = Game.moveWarriors(g, p, from, to, n)
+
     /** Removes [n] of this faction's warriors from [reef] and returns them to the supply. */
     fun removeWarriors(g: GameState, p: Int, reef: Int, n: Int, arrivals: Int)
 
@@ -85,6 +101,21 @@ interface FactionRules {
     /** How good [p]'s position is, for bots. [self] adds features that only matter to the player choosing now. */
     fun value(g: GameState, p: Int, self: Boolean): Double
 }
+
+/**
+ * One crafting piece. It pays [suit] once per turn ([Suit.MOON]: any suit). Pieces with the same
+ * [key] are alike. A [spend] piece is used up when it pays.
+ */
+data class CraftUnit(val key: String, val suit: Suit, val spend: Boolean = false)
+
+/** Each of [p]'s buildings pays its reef's suit. */
+fun buildingUnits(g: GameState, p: Int): List<CraftUnit> {
+    val f = g.players[p].faction
+    return g.reefs.indices.flatMap { reef -> List(g.reefs[reef].buildingsOf(f)) { CraftUnit("reef:$reef", g.suitOf(reef)) } }
+}
+
+/** One crafting piece for each reef in [reefs], paying that reef's suit. */
+fun reefUnits(g: GameState, reefs: List<Int>): List<CraftUnit> = reefs.map { CraftUnit("reef:$it", g.suitOf(it)) }
 
 /** Shared bot helpers. */
 object Eval {
@@ -116,19 +147,20 @@ object SharksRules : FactionRules {
     override val canDig = true
     override val setupHint = "place 3 sharks at any gate."
     const val SETUP_SHARKS = 3
-    const val MAX_ARRIVALS = 3
     const val BLOOD_VP = 2
+    const val FRENZY = 2
 
-    override fun dawnHint(g: GameState, p: Int) = "${arrivals(g, p)} shark${if (arrivals(g, p) == 1) "" else "s"} arrive at a gate of your choice (1, plus 1 per Blood token, up to 3)."
+    override fun dawnHint(g: GameState, p: Int) = "${arrivals(g, p)} shark${if (arrivals(g, p) == 1) "" else "s"} arrive at a gate of your choice."
+    override fun duskHint(g: GameState, p: Int) = "each Blood with your sharks: feed on it for $BLOOD_VP VP, or frenzy and $FRENZY sharks arrive there."
     override fun warriorNoun(n: Int) = if (n == 1) "shark" else "sharks"
     override fun newState(): FactionState = SharksState()
     private fun st(g: GameState, p: Int) = g.players[p].fs as SharksState
 
-    /** Sharks arriving this Dawn: 1, plus 1 per Blood token on the map, up to 3. */
-    fun arrivals(g: GameState, p: Int): Int {
-        val blood = g.reefs.sumOf { it.count(PieceType.BLOOD) }
-        return minOf(MAX_ARRIVALS, 1 + blood, st(g, p).supply)
-    }
+    /** Sharks arriving this Dawn: 1, or 2 with none on the map. */
+    fun arrivals(g: GameState, p: Int): Int = minOf(if (Eval.onMap(g, id) == 0) 2 else 1, st(g, p).supply)
+
+    /** Reefs with Blood and your sharks: meals, frenzies or crafting. */
+    fun bloodReefs(g: GameState): List<Int> = g.reefs.indices.filter { g.reefs[it].has(PieceType.BLOOD) && g.reefs[it].warriors(id) > 0 }
 
     override fun setupOptions(g: GameState, p: Int): List<Option> =
         if (g.players[p].setupDone) emptyList() else Board.gates.map { PlaceSetup(it) }
@@ -172,6 +204,8 @@ object SharksRules : FactionRules {
             for (to in g.reefs.indices) {
                 if (to != from && to !in targets && g.reefs[to].has(PieceType.BLOOD) && Game.distance(g, from, to, id) <= 2) targets[to] = true
             }
+            // The open ocean: from a gate, any other gate is one move away.
+            if (Board.reefs[from].gate) for (to in Board.gates) if (to != from && to !in targets) targets[to] = false
             for ((to, scent) in targets) {
                 val prey = Game.battleTargets(g, p, to)
                 for (k in n downTo 1) {
@@ -185,7 +219,12 @@ object SharksRules : FactionRules {
 
     override fun applyDay(g: GameState, p: Int, o: Option) {
         val m = o as Hunt
-        Game.log(g, "Sharks: move ${m.n} ${warriorNoun(m.n)} from ${Board.name(m.from)} to ${Board.name(m.to)}" + (if (m.scent) ", following Blood." else "."))
+        val how = when {
+            m.scent -> ", following Blood."
+            Board.reefs[m.from].gate && Board.reefs[m.to].gate && m.to !in Board.neighbors(m.from) -> " through the open ocean."
+            else -> "."
+        }
+        Game.log(g, "Sharks: move ${m.n} ${warriorNoun(m.n)} from ${Board.name(m.from)} to ${Board.name(m.to)}$how")
         Game.moveWarriors(g, p, m.from, m.to, m.n)
         if (m.prey != null && g.reefs[m.to].warriors(id) > 0 && m.prey in Game.battleTargets(g, p, m.to)) Game.startBattle(g, p, m.to, m.prey)
     }
@@ -200,17 +239,34 @@ object SharksRules : FactionRules {
         setMoved(s, to, (s.moved[to] ?: 0) + n)
     }
 
-    override fun duskAuto(g: GameState, p: Int) {
-        for (reef in g.reefs.indices) {
-            val rs = g.reefs[reef]
-            if (rs.warriors(id) == 0) continue
-            val eaten = rs.count(PieceType.BLOOD)
-            if (eaten == 0) continue
-            rs.pieces.removeAll { it.type == PieceType.BLOOD }
-            g.blood += eaten
-            Game.scoreVp(g, p, eaten * BLOOD_VP, "eating Blood in ${Board.name(reef)}")
-            if (g.winner != null) return
+    override fun duskOptions(g: GameState, p: Int): List<Option> {
+        val reef = bloodReefs(g).firstOrNull() ?: return emptyList()
+        val n = minOf(FRENZY, st(g, p).supply)
+        return listOf(FeedBlood(reef)) + (if (n > 0) listOf(Frenzy(reef, n)) else emptyList())
+    }
+
+    override fun applyDusk(g: GameState, p: Int, o: Option) {
+        val s = st(g, p)
+        val reef = o.reefs.first()
+        g.reefs[reef].pieces.remove(Piece(null, PieceType.BLOOD))
+        g.blood++
+        when (o) {
+            is FeedBlood -> {
+                Game.log(g, "Sharks: feed on the Blood in ${Board.name(reef)}.")
+                Game.scoreVp(g, p, BLOOD_VP, "eating Blood in ${Board.name(reef)}")
+            }
+            is Frenzy -> {
+                g.reefs[reef].addWarriors(id, o.n)
+                s.supply -= o.n
+                // Frenzied sharks are already swimming hard: they count as having moved.
+                setMoved(s, reef, (s.moved[reef] ?: 0) + o.n)
+                Game.log(g, "Sharks: frenzy in ${Board.name(reef)}! ${o.n} more ${warriorNoun(o.n)} arrive.")
+            }
+            else -> error("Sharks can't ${o.describe()} at Dusk")
         }
+    }
+
+    override fun duskAuto(g: GameState, p: Int) {
         val s = st(g, p)
         for (reef in g.reefs.indices) {
             val here = g.reefs[reef].warriors(id)
@@ -223,6 +279,16 @@ object SharksRules : FactionRules {
             }
         }
         s.moved.clear()
+    }
+
+    /** Blood in a reef with your sharks pays that reef's suit, and is eaten. */
+    override fun craftUnits(g: GameState, p: Int): List<CraftUnit> = bloodReefs(g).map { CraftUnit("blood:$it", g.suitOf(it), spend = true) }
+
+    override fun spendCraftUnit(g: GameState, p: Int, unit: CraftUnit) {
+        val reef = unit.key.removePrefix("blood:").toInt()
+        g.reefs[reef].pieces.remove(Piece(null, PieceType.BLOOD))
+        g.blood++
+        Game.log(g, "Sharks: eat the Blood in ${Board.name(reef)} to craft.")
     }
 
     override fun removeWarriors(g: GameState, p: Int, reef: Int, n: Int, arrivals: Int) {
@@ -246,15 +312,16 @@ object SharksRules : FactionRules {
         val s = st(g, p)
         var v = 0.0
         val onMap = Eval.onMap(g, id)
-        v += onMap * 9.0 + s.supply * 2.0
+        // A small pack is worth a lot more per shark than a big one.
+        v += minOf(onMap, 6) * 9.0 + maxOf(0, onMap - 6) * 5.0 + s.supply * 1.0
         if (self && g.current == p && g.phase == Phase.DAY) v -= (onMap - s.moved.values.sum()) * 8.0
         for (reef in g.reefs.indices) {
             val rs = g.reefs[reef]
             val here = rs.warriors(id)
             if (rs.has(PieceType.BLOOD)) {
                 v += when {
-                    here > 0 -> 7.0
-                    g.reefs.indices.any { g.reefs[it].warriors(id) > 0 && Board.distance(it, reef) <= 2 } -> 2.5
+                    here > 0 -> 12.0
+                    g.reefs.indices.any { g.reefs[it].warriors(id) > 0 && Board.distance(it, reef) <= 2 } -> 4.0
                     else -> 0.0
                 }
             }
@@ -267,7 +334,6 @@ object SharksRules : FactionRules {
 
 object CoralRules : FactionRules {
     override val id = FactionId.CORAL
-    override val canCraft = true
     override val actionsPerDay = 3
     override val setupHint = "2 coral and 3 polyps in a reef that isn't a gate, and 1 polyp in each neighboring reef."
     const val SETUP_CORAL = 2
@@ -275,13 +341,14 @@ object CoralRules : FactionRules {
     const val DRIFT_POLYPS = 2
 
     override fun warriorNoun(n: Int) = if (n == 1) "polyp" else "polyps"
+    override fun duskHint(g: GameState, p: Int) = "score the Nursery: 1 VP per reef with your coral where another faction has warriors."
     override fun newState(): FactionState = CoralState()
     private fun st(g: GameState, p: Int) = g.players[p].fs as CoralState
 
     fun coralOnMap(g: GameState): Int = g.reefs.sumOf { it.buildingsOf(id) }
 
-    /** Each coral scores when grown: 1, 1, 1, 2, 2, 2, 3... counting coral beyond the two you start with. */
-    fun growVp(coralOnMapAfter: Int): Int = maxOf(1, coralOnMapAfter / 3)
+    /** Each coral scores when grown: 1 for each 4 coral on the map, at least 1. */
+    fun growVp(coralOnMapAfter: Int): Int = maxOf(1, coralOnMapAfter / 4)
 
     override fun setupOptions(g: GameState, p: Int): List<Option> =
         if (g.players[p].setupDone) emptyList() else Board.reefs.filter { !it.gate && Game.freeSlots(g, it.id) >= SETUP_CORAL }.map { PlaceSetup(it.id) }
@@ -305,7 +372,8 @@ object CoralRules : FactionRules {
         val s = st(g, p)
         val hand = g.players[p].hand
         val out = mutableListOf<Option>()
-        if (s.coral > 0) {
+        // A turn that bleaches can't grow.
+        if (s.coral > 0 && g.turn.used("bleach") == 0) {
             for (reef in g.reefs.indices) {
                 if (Game.freeSlots(g, reef) <= 0 || !Game.ruledBy(g, reef, p)) continue
                 for (c in hand) if (Cards[c].suit == Suit.MOON || Cards[c].suit == g.suitOf(reef)) out += Grow(reef, c)
@@ -321,8 +389,16 @@ object CoralRules : FactionRules {
                 for (c in hand) if (spawnSources(g, Cards[c].suit).isNotEmpty()) out += Spawn(c)
             }
         }
+        out += Game.battleOptions(g, p)
         return out
     }
+
+    /** Bleaching: once a turn, a coral becomes 2 cards. */
+    override fun freeDayOptions(g: GameState, p: Int): List<Option> =
+        if (g.turn.used("bleach") > 0 || g.turn.used("grow") > 0) emptyList() else g.reefs.indices.filter { g.reefs[it].buildingsOf(id) > 0 }.map { Bleach(it) }
+
+    /** Reefs with your coral where another faction has warriors. */
+    fun nursery(g: GameState): Int = g.reefs.count { rs -> rs.buildingsOf(id) > 0 && rs.warriors.keys.any { it != id } }
 
     private fun spawnSources(g: GameState, suit: Suit): List<Int> =
         g.reefs.indices.filter { g.reefs[it].buildingsOf(id) > 0 && (suit == Suit.MOON || g.suitOf(it) == suit) }
@@ -331,6 +407,7 @@ object CoralRules : FactionRules {
         val s = st(g, p)
         when (o) {
             is Grow -> {
+                g.turn.use("grow")
                 Game.discardFromHand(g, p, o.cardId)
                 g.reefs[o.reef].pieces.add(Piece(id, PieceType.CORAL))
                 s.coral--
@@ -350,9 +427,30 @@ object CoralRules : FactionRules {
                 for (src in sources) for (n in Game.neighbors(g, src, id)) placed += placePolyps(g, s, n, 1)
                 Game.log(g, "Coral: spawn from ${sources.joinToString { Board.name(it) }}, $placed new ${warriorNoun(placed)}.")
             }
+            is Battle -> Game.startBattle(g, p, o.reef, o.defender)
+            is Bleach -> {
+                g.turn.use("bleach")
+                Game.log(g, "Coral: a coral in ${Board.name(o.reef)} bleaches white.")
+                Game.removePiece(g, o.reef, g.reefs[o.reef].pieces.first { it.owner == id && it.type == PieceType.CORAL })
+                // Bleached coral is dead: it leaves the game instead of going back to the supply.
+                val s = st(g, p)
+                s.coral--
+                s.bleached++
+                Game.draw(g, p, 2)
+            }
             else -> error("Coral can't ${o.describe()}")
         }
     }
+
+    override fun duskAuto(g: GameState, p: Int) {
+        val n = nursery(g)
+        Game.scoreVp(g, p, n, "sheltering visitors in $n reef${if (n == 1) "" else "s"}")
+    }
+
+    override fun pushable(g: GameState, p: Int, reef: Int) = false
+
+    /** Each reef with your coral pays its suit, however many coral it has. */
+    override fun craftUnits(g: GameState, p: Int) = reefUnits(g, g.reefs.indices.filter { g.reefs[it].buildingsOf(id) > 0 })
 
     override fun extraDraws(g: GameState, p: Int) = coralOnMap(g) / 5
 
@@ -369,7 +467,7 @@ object CoralRules : FactionRules {
 
     override fun supplySummary(g: GameState, p: Int): String {
         val s = st(g, p)
-        return "${s.polyps} polyps and ${s.coral} coral left to place"
+        return "${s.polyps} polyps and ${s.coral} coral left to place" + (if (s.bleached > 0) " · ${s.bleached} bleached" else "")
     }
 
     private fun placePolyps(g: GameState, s: CoralState, reef: Int, n: Int): Int {
@@ -390,6 +488,8 @@ object CoralRules : FactionRules {
             val coral = rs.buildingsOf(id)
             v += coral * 5.0 + rs.warriors(id) * 1.5
             if (coral > 0) spawnable += g.suitOf(reef)
+            // Visitors pay every Dusk.
+            if (coral > 0 && rs.warriors.keys.any { it != id }) v += 6.0
             if (Game.ruledBy(g, reef, p)) {
                 v += 2.0
                 if (Game.freeSlots(g, reef) > 0) {

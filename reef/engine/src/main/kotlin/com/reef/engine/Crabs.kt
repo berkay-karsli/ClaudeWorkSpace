@@ -2,10 +2,9 @@ package com.reef.engine
 
 object CrabsRules : FactionRules {
     override val id = FactionId.CRABS
-    override val canCraft = true
     override val setupHint = "1 market and 4 crabs in any reef."
     const val SETUP = 4
-    const val RECRUIT = 2
+    const val RECRUIT = 3
     const val SHELLS = 8
 
     override fun warriorNoun(n: Int) = if (n == 1) "crab" else "crabs"
@@ -84,8 +83,18 @@ object CrabsRules : FactionRules {
         val s = st(g, p)
         val out = mutableListOf<Option>()
         out += Game.standardMoves(g, p)
+        out += Game.battleOptions(g, p)
         if (s.supply > 0) out += recruitReefs(g).map { Recruit(it) }
         return out
+    }
+
+    /** The vacancy chain: when another faction's building goes from a reef with crabs, a market moves in. */
+    fun vacancy(g: GameState, reef: Int, removed: Piece) {
+        val s = g.state<CrabsState>(id) ?: return
+        if (removed.owner == id || g.reefs[reef].warriors(id) == 0 || s.markets == 0 || Game.freeSlots(g, reef) <= 0) return
+        g.reefs[reef].pieces.add(Piece(id, PieceType.MARKET))
+        s.markets--
+        Game.log(g, "Hermit Crabs: a vacancy in ${Board.name(reef)}! The crabs move a market in.")
     }
 
     fun recruitReefs(g: GameState): List<Int> {
@@ -115,6 +124,7 @@ object CrabsRules : FactionRules {
                 Game.log(g, "Hermit Crabs: move ${o.n} from ${Board.name(o.from)} to ${Board.name(o.to)}.")
                 Game.moveWarriors(g, p, o.from, o.to, o.n)
             }
+            is Battle -> Game.startBattle(g, p, o.reef, o.defender)
             is Recruit -> {
                 val n = place(g, p, o.reef, RECRUIT)
                 Game.log(g, "Hermit Crabs: $n ${warriorNoun(n)} join at ${Board.name(o.reef)}.")

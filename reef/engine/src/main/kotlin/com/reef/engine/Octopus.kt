@@ -46,6 +46,7 @@ object OctopusRules : FactionRules {
         s.ordersAdded = 0
         s.ordersDone = false
         s.mantleDone = false
+        s.rewired = false
     }
 
     // ---- Dawn: the Mantle comes back, then orders ------------------------------------------
@@ -58,10 +59,20 @@ object OctopusRules : FactionRules {
     override fun dawnOptions(g: GameState, p: Int): List<Option> {
         val s = st(g, p)
         if (s.mantle < 0) return mantleReturnReefs(g, p).map { MantleMove(it) }
-        if (s.ordersDone || s.ordersAdded >= ORDERS_PER_DAWN) return emptyList()
-        val open = (0 until ARMS).filter { s.arms[it] >= 0 && s.orders[it] == null }
+        if (s.ordersDone) return emptyList()
         val out = mutableListOf<Option>()
-        for (arm in open) for (c in g.players[p].hand) out += SetOrder(arm, c)
+        if (s.ordersAdded < ORDERS_PER_DAWN) {
+            val open = (0 until ARMS).filter { s.arms[it] >= 0 && s.orders[it] == null }
+            for (arm in open) for (c in g.players[p].hand.distinct()) out += SetOrder(arm, c)
+        }
+        if (!s.rewired) {
+            // Swapping two orders only matters when they differ.
+            for (a in 0 until ARMS) for (b in a + 1 until ARMS) {
+                val x = s.orders[a]?.let { Cards[it].suit }
+                val y = s.orders[b]?.let { Cards[it].suit }
+                if (x != y) out += Rewire(a, b)
+            }
+        }
         return if (out.isEmpty()) out else out + Done("Start the Day")
     }
 
@@ -73,6 +84,13 @@ object OctopusRules : FactionRules {
                 sync(g, p)
                 Game.log(g, "Octopus: the Mantle returns in ${Board.name(o.reef)}.")
                 snapBack(g, p)
+            }
+            is Rewire -> {
+                val t = s.orders[o.a]
+                s.orders[o.a] = s.orders[o.b]
+                s.orders[o.b] = t
+                s.rewired = true
+                Game.log(g, "Octopus: arms ${o.a + 1} and ${o.b + 1} swap orders.")
             }
             is SetOrder -> {
                 g.players[p].hand.remove(o.cardId)
@@ -108,7 +126,8 @@ object OctopusRules : FactionRules {
         val out = mutableListOf<Option>()
         val rs = g.reefs[reef]
         for (piece in rs.pieces.filter { !it.type.building && it.owner != null && it.owner != id }.distinctBy { it.owner to it.type }) {
-            out += ArmSteal(arm, reef, piece.owner!!, piece.type)
+            if (Game.rules(piece.owner!!).immune(g, g.player(piece.owner), reef)) continue
+            out += ArmSteal(arm, reef, piece.owner, piece.type)
         }
         for (q in g.players.indices) {
             val f = g.players[q].faction
@@ -220,6 +239,62 @@ object OctopusRules : FactionRules {
         for (reef in moved) RemorasRules.follow(g, id, reef, s.mantle)
     }
 
+    // ---- Ink, pushes and crafting -------------------------------------------------------------
+
+    /** When battled in [reef], the octopus may discard any card to ink and jet to a neighboring reef. */
+    fun inkOptions(g: GameState, p: Int, reef: Int): List<Option> {
+        if (g.players[p].faction != id || g.reefs[reef].warriors(id) == 0) return emptyList()
+        val dests = Game.neighbors(g, reef, id)
+        return g.players[p].hand.distinct().flatMap { c -> dests.map { InkCloud(c, it) } }
+    }
+
+    fun ink(g: GameState, p: Int, attacker: Int, reef: Int, o: InkCloud) {
+        Game.discardFromHand(g, p, o.cardId)
+        Game.log(g, "Octopus: ink! The attack misses, and the octopus jets to ${Board.name(o.to)}.")
+        val n = g.reefs[reef].warriors(id)
+        jet(g, p, reef, o.to, n)
+        g.lastBattle = BattleReport(g.players[attacker].faction, id, reef, emptyList(), 0, 0, listOf("Ink: the octopus jets to ${Board.name(o.to)}"), g.round, g.log.size)
+    }
+
+    /** Pushed arms go first, the Mantle last. */
+    override fun displace(g: GameState, p: Int, from: Int, to: Int, n: Int) = jet(g, p, from, to, n)
+
+    /** Moves [n] of the octopus's pieces from [from] to [to]: arms first, the Mantle last. */
+    private fun jet(g: GameState, p: Int, from: Int, to: Int, n: Int) {
+        val s = st(g, p)
+        var left = n
+        for (i in (0 until ARMS).reversed()) {
+            if (left == 0) break
+            if (s.arms[i] == from) {
+                s.arms[i] = to
+                left--
+            }
+        }
+        val mantleMoved = left > 0 && s.mantle == from
+        if (mantleMoved) s.mantle = to
+        sync(g, p)
+        Game.afterArrive(g, p, from, to, n)
+        if (mantleMoved) snapBack(g, p)
+    }
+
+    /** Garden treasures: a stolen card pays its suit, a stolen token pays any suit. Crafting spends them. */
+    override fun craftUnits(g: GameState, p: Int): List<CraftUnit> = st(g, p).garden.map { item ->
+        if (item.kind == "card") CraftUnit("card:${item.card}", Cards[item.card!!].suit, spend = true)
+        else CraftUnit("token:${item.owner}:${item.type}", Suit.MOON, spend = true)
+    }
+
+    override fun spendCraftUnit(g: GameState, p: Int, unit: CraftUnit) {
+        val s = st(g, p)
+        val item = s.garden.first { if (it.kind == "card") unit.key == "card:${it.card}" else unit.key == "token:${it.owner}:${it.type}" }
+        s.garden.remove(item)
+        if (item.kind == "card") g.discard += item.card!!
+        else {
+            val q = g.player(item.owner!!)
+            if (q >= 0) Game.rules(item.owner).pieceRemoved(g, q, Piece(item.owner, item.type!!, item.suit))
+        }
+        Game.log(g, "Octopus: spend a treasure from the garden to craft.")
+    }
+
     // ---- Dusk --------------------------------------------------------------------------------
 
     fun gardenKinds(s: OctopusState): Int =
@@ -295,9 +370,19 @@ object OctopusRules : FactionRules {
         for (i in 0 until ARMS) {
             val c = s.orders[i] ?: continue
             if (s.arms[i] < 0) continue
-            v += 1.5
             val reef = s.arms[i]
             val suit = Cards[c].suit
+            // A standing order acts every turn: worth more than the card it costs, unless it
+            // has nothing to do where the arm is and will recoil.
+            val enemies = g.players.any { it.faction != id && g.reefs[reef].warriors(it.faction) > 0 }
+            val loot = g.reefs[reef].pieces.any { !it.type.building && it.owner != null && it.owner != id } ||
+                g.players.any { it.faction != id && it.hand.isNotEmpty() && (g.reefs[reef].warriors(it.faction) > 0 || g.reefs[reef].pieces.any { pc -> pc.owner == it.faction }) }
+            v += when (suit) {
+                Suit.MOON -> 4.0
+                Suit.KELP -> 3.0
+                Suit.SPONGE -> if (enemies) 3.0 else -2.0
+                Suit.PEARL -> if (loot) 3.0 else -2.0
+            }
             if (suit == Suit.PEARL || suit == Suit.MOON) {
                 if (g.reefs[reef].pieces.any { !it.type.building && it.owner != null && it.owner != id }) v += 2.0
                 else if (g.players.any { it.faction != id && g.reefs[reef].warriors(it.faction) > 0 }) v += 1.0

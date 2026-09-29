@@ -133,9 +133,9 @@ private fun sharedIcon(title: String) = when (title) {
 }
 
 /**
- * A faction's board: who they are on the left; on the right, their three rules each with a
- * picture, the shape of their turn from Dawn to Dusk, and how they score. The words come from
- * the design guide.
+ * A faction's board: who they are and the choice they face on the left; on the right, how they
+ * move, battle, recruit and craft, their three rules and their quirk each with a picture, the
+ * shape of their turn from Dawn to Dusk, and how they score. The words come from the design guide.
  */
 @Composable
 fun FactionBoard(f: FactionId, modifier: Modifier = Modifier) {
@@ -156,23 +156,40 @@ fun FactionBoard(f: FactionId, modifier: Modifier = Modifier) {
             Text("complexity " + "●".repeat(plate.complexity) + "○".repeat(4 - plate.complexity) + " · reach ${plate.reach}", color = Reef.muted, fontSize = 11.sp)
             Text("“${plate.tagline}”", color = Reef.ink, fontStyle = FontStyle.Italic, fontSize = 14.sp)
             Text(plate.idea, color = Reef.muted, fontSize = 12.sp, lineHeight = 15.sp)
+            Column(
+                Modifier.fillMaxWidth().background(color.copy(alpha = 0.16f), RoundedCornerShape(10.dp)).border(1.dp, color, RoundedCornerShape(10.dp)).padding(8.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text("THE CHOICE", color = color, fontSize = 10.sp, letterSpacing = 1.sp, fontWeight = FontWeight.SemiBold)
+                Text(plate.choice, color = Reef.ink, fontSize = 12.sp, lineHeight = 15.sp)
+            }
         }
         Column(Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            SectionTitle("Three rules")
-            for (r in plate.rules) {
-                Row(
-                    Modifier.fillMaxWidth().background(Reef.raised, RoundedCornerShape(12.dp)).border(1.dp, Reef.line, RoundedCornerShape(12.dp)).padding(8.dp),
-                    verticalAlignment = Alignment.Top,
-                ) {
-                    Box(Modifier.size(44.dp).background(Reef.paperBrush, RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
-                        ArtImage(Guide.ruleIcon(f, r.title), 38.dp)
-                    }
-                    Spacer(Modifier.width(10.dp))
-                    Column {
-                        Text(r.title, color = Reef.ink, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                        Text(stripTags(r.text), color = Reef.muted, fontSize = 12.5.sp, lineHeight = 16.sp)
+            SectionTitle("Its own way")
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                for ((verb, icon) in listOf("Move" to Icons.move, "Battle" to Icons.battle, "Recruit" to Icons.recruit, "Craft" to Icons.craft)) {
+                    Column(
+                        Modifier.weight(1f).background(Reef.surface, RoundedCornerShape(10.dp)).padding(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            ArtImage(icon, 20.dp)
+                            Spacer(Modifier.width(4.dp))
+                            Text(verb, color = Reef.current, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                        Text(plate.ways[verb].orEmpty(), color = Reef.muted, fontSize = 11.sp, lineHeight = 13.sp)
                     }
                 }
+            }
+            SectionTitle("Three rules")
+            for (r in plate.rules) RuleRow(f, r.title, r.text, quirk = false)
+            SectionTitle("Quirk")
+            RuleRow(f, plate.quirk.title, plate.quirk.text, quirk = true)
+            SectionTitle("Crafts with")
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                ArtImage(Icons.craft, 24.dp)
+                Spacer(Modifier.width(8.dp))
+                Text(plate.craft, color = Reef.ink, fontSize = 13.sp)
             }
             SectionTitle("A turn")
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -205,6 +222,26 @@ fun FactionBoard(f: FactionId, modifier: Modifier = Modifier) {
             }
             SectionTitle("Pieces and setup")
             Text("${plate.pieces} Setup: ${plate.setup}", color = Reef.muted, fontSize = 13.sp)
+        }
+    }
+}
+
+/** One rule beside its picture. The quirk gets a dashed frame in the faction's color. */
+@Composable
+private fun RuleRow(f: FactionId, title: String, text: String, quirk: Boolean) {
+    val shape = RoundedCornerShape(12.dp)
+    Row(
+        Modifier.fillMaxWidth().background(if (quirk) Reef.faction(f).copy(alpha = 0.14f) else Reef.raised, shape)
+            .border(if (quirk) 2.dp else 1.dp, if (quirk) Reef.faction(f) else Reef.line, shape).padding(8.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Box(Modifier.size(44.dp).background(Reef.paperBrush, RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
+            ArtImage(Guide.ruleIcon(f, title), 38.dp)
+        }
+        Spacer(Modifier.width(10.dp))
+        Column {
+            Text(title, color = Reef.ink, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+            Text(stripTags(text), color = Reef.muted, fontSize = 12.5.sp, lineHeight = 16.sp)
         }
     }
 }

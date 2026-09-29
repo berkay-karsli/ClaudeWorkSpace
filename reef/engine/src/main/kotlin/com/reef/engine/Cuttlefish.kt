@@ -22,35 +22,47 @@ object Gallery {
         triples(held.filter { g.suitOf(it) == suit }).any { connected(it) }
     }
 
-    private fun neighborsOf(a: Suit, b: Suit) = { g: GameState, held: Set<Int> ->
-        held.any { x -> g.suitOf(x) == a && Board.neighbors(x).any { it in held && g.suitOf(it) == b } }
+    /** Whether [held] has [n] reefs that are all connected: a connected group that big always contains n. */
+    private fun chain(held: Set<Int>, n: Int): Boolean {
+        val seen = mutableSetOf<Int>()
+        for (start in held) {
+            if (!seen.add(start)) continue
+            var size = 1
+            val queue = ArrayDeque(listOf(start))
+            while (queue.isNotEmpty()) {
+                for (x in Board.neighbors(queue.removeFirst())) if (x in held && seen.add(x)) {
+                    size++
+                    queue.addLast(x)
+                }
+            }
+            if (size >= n) return true
+        }
+        return false
     }
 
     val all: List<Pattern> = listOf(
-        Pattern(0, "Kelp Forest", "3 connected Kelp reefs", 3, trio(Suit.KELP)),
-        Pattern(1, "Sponge Garden", "3 connected Sponge reefs", 3, trio(Suit.SPONGE)),
-        Pattern(2, "Pearl Bed", "3 connected Pearl reefs", 3, trio(Suit.PEARL)),
-        Pattern(3, "Rainbow", "3 connected reefs, one of each suit", 3, { g, held ->
+        Pattern(0, "Kelp Forest", "3 connected Kelp reefs", 2, trio(Suit.KELP)),
+        Pattern(1, "Sponge Garden", "3 connected Sponge reefs", 2, trio(Suit.SPONGE)),
+        Pattern(2, "Pearl Bed", "3 connected Pearl reefs", 2, trio(Suit.PEARL)),
+        Pattern(3, "Rainbow", "3 connected reefs, one of each suit", 2, { g, held ->
             triples(held.toList()).any { t -> t.map { g.suitOf(it) }.toSet().size == 3 && connected(t) }
         }),
-        Pattern(4, "Twin Gates", "2 gates of the same suit", 2, { g, held ->
-            held.filter { Board.reefs[it].gate }.groupBy { g.suitOf(it) }.values.any { it.size >= 2 }
-        }),
-        Pattern(5, "Far Mirror", "a pair of opposite gates of the same suit", 4, { g, held ->
+        Pattern(4, "Far Mirror", "a pair of opposite gates of the same suit", 3, { g, held ->
             Board.oppositeGates.any { (a, b) -> a in held && b in held && g.suitOf(a) == g.suitOf(b) }
         }),
-        Pattern(6, "Deep Pair", "2 rim reefs of the same suit", 2, { g, held ->
-            held.filter { Board.reefs[it].rim }.groupBy { g.suitOf(it) }.values.any { it.size >= 2 }
-        }),
-        Pattern(7, "Shoreline", "3 shore reefs, one of each suit", 3, { g, held ->
+        Pattern(5, "Three Gates", "3 of the 4 gates", 2, { _, held -> held.count { Board.reefs[it].gate } >= 3 }),
+        Pattern(6, "The Rim", "all 3 rim reefs", 2, { _, held -> Board.reefs.filter { it.rim }.all { it.id in held } }),
+        Pattern(7, "Shoreline", "3 shore reefs, one of each suit", 2, { g, held ->
             held.filter { Board.reefs[it].shore }.map { g.suitOf(it) }.toSet().size == 3
         }),
         Pattern(8, "Monochrome", "4 reefs of one suit", 3, { g, held ->
             held.groupBy { g.suitOf(it) }.values.any { it.size >= 4 }
         }),
-        Pattern(9, "Kelp by Sponge", "a Kelp reef next to a Sponge reef", 2, neighborsOf(Suit.KELP, Suit.SPONGE)),
-        Pattern(10, "Sponge by Pearl", "a Sponge reef next to a Pearl reef", 2, neighborsOf(Suit.SPONGE, Suit.PEARL)),
-        Pattern(11, "Pearl by Kelp", "a Pearl reef next to a Kelp reef", 2, neighborsOf(Suit.PEARL, Suit.KELP)),
+        Pattern(9, "The Gyre", "all 4 reefs of the Gyre", 3, { _, held -> JellyfishRules.gyre.all { it in held } }),
+        Pattern(10, "Long Line", "5 connected reefs", 3, { _, held -> chain(held, 5) }),
+        Pattern(11, "Checkerboard", "2 reefs of each suit", 3, { g, held ->
+            listOf(Suit.KELP, Suit.SPONGE, Suit.PEARL).all { suit -> held.count { g.suitOf(it) == suit } >= 2 }
+        }),
     )
 
     operator fun get(id: Int) = all[id]
@@ -63,13 +75,28 @@ object CuttlefishRules : FactionRules {
     override val setupHint = "3 cuttlefish in each of two reefs."
     const val SETUP = 3
     const val GALLERY = 3
+    const val HATCH = 2
+    const val HYPNOTIZE = 3
 
     override fun warriorNoun(n: Int) = "cuttlefish"
     override fun newState(): FactionState = CuttlefishState()
     private fun st(g: GameState, p: Int) = g.players[p].fs as CuttlefishState
 
     override fun dawnHint(g: GameState, p: Int) = "with no pigment on the map, 2 cuttlefish arrive at a gate of your choice."
-    override fun duskHint(g: GameState, p: Int) = "score one Gallery pattern your cuttlefish hold."
+    override fun duskHint(g: GameState, p: Int) = "score every Gallery pattern your cuttlefish hold."
+
+    /** The reefs the cuttlefish rule: patterns are made of these. */
+    fun ruled(g: GameState): Set<Int> {
+        val p = g.player(id)
+        return if (p < 0) emptySet() else g.reefs.indices.filter { Game.ruledBy(g, it, p) }.toSet()
+    }
+
+    /** The Gallery cards the reefs you rule meet right now. */
+    fun metPatterns(g: GameState): List<Pattern> {
+        val s = g.state<CuttlefishState>(id) ?: return emptyList()
+        val ruled = ruled(g)
+        return s.gallery.map { Gallery[it] }.filter { it.met(g, ruled) }
+    }
 
     /** A reef is camouflaged while it holds a cuttlefish pigment. */
     fun camouflaged(g: GameState, reef: Int): Boolean = g.reefs[reef].pieces.any { it.type == PieceType.PIGMENT && it.owner == id }
@@ -123,7 +150,36 @@ object CuttlefishRules : FactionRules {
         Game.log(g, "Cuttlefish: ${a.n} cuttlefish arrive at ${Board.name(a.reef)}.")
     }
 
-    override fun dayOptions(g: GameState, p: Int): List<Option> = Game.standardMoves(g, p) + paintOptions(g, p)
+    override fun dayOptions(g: GameState, p: Int): List<Option> =
+        Game.standardMoves(g, p) + Game.battleOptions(g, p) + paintOptions(g, p) + hatchOptions(g, p) + hypnotizeOptions(g, p)
+
+    private fun hatchOptions(g: GameState, p: Int): List<Option> {
+        if (st(g, p).supply == 0) return emptyList()
+        val held = held(g)
+        val out = mutableListOf<Option>()
+        for (c in g.players[p].hand.distinct()) {
+            val suit = Cards[c].suit
+            for (reef in g.reefs.indices) {
+                if (suit != Suit.MOON && g.suitOf(reef) != suit) continue
+                if (held.isEmpty() || reef in held) out += Hatch(c, reef)
+            }
+        }
+        return out
+    }
+
+    private fun hypnotizeOptions(g: GameState, p: Int): List<Option> {
+        val hand = g.players[p].hand.distinct()
+        if (hand.isEmpty()) return emptyList()
+        val out = mutableListOf<Option>()
+        for (from in held(g)) {
+            for ((q, dests) in Game.pushTargets(g, p, from)) {
+                val f = g.players[q].faction
+                val most = minOf(HYPNOTIZE, g.reefs[from].warriors(f))
+                for (c in hand) for (to in dests) for (n in most downTo 1) out += Hypnotize(c, from, f, to, n)
+            }
+        }
+        return out
+    }
 
     private fun paintOptions(g: GameState, p: Int): List<Option> {
         val s = st(g, p)
@@ -168,20 +224,39 @@ object CuttlefishRules : FactionRules {
                 g.reefs[o.reef].pieces.add(Piece(id, PieceType.PIGMENT, suit = o.suit))
                 Game.log(g, "Cuttlefish: paint ${Board.name(o.reef)} ${o.suit.label}.")
             }
+            is Battle -> Game.startBattle(g, p, o.reef, o.defender)
+            is Hatch -> {
+                Game.discardFromHand(g, p, o.cardId)
+                val n = place(g, p, o.reef, HATCH)
+                Game.log(g, "Cuttlefish: $n cuttlefish hatch in ${Board.name(o.reef)}.")
+            }
+            is Hypnotize -> {
+                Game.discardFromHand(g, p, o.cardId)
+                Game.log(g, "Cuttlefish: ripple and flash in ${Board.name(o.from)}. The ${o.victim.display} are hypnotized.")
+                Game.push(g, p, g.player(o.victim), o.from, o.to, o.n)
+            }
             else -> error("Cuttlefish can't ${o.describe()}")
         }
     }
 
+    /** Pigments pay their suit. */
+    override fun craftUnits(g: GameState, p: Int) = g.reefs.indices.mapNotNull { reef -> pigmentAt(g, reef)?.let { CraftUnit("pigment:$reef", it.suit!!) } }
+
+    /** Every pattern held scores, then each one scored is replaced. */
     override fun duskAuto(g: GameState, p: Int) {
         val s = st(g, p)
-        val held = held(g)
-        // One pattern per Dusk: the best one held.
-        val slot = s.gallery.indices.filter { Gallery[s.gallery[it]].met(g, held) }.maxByOrNull { Gallery[s.gallery[it]].vp } ?: return
-        val pattern = Gallery[s.gallery[slot]]
-        Game.scoreVp(g, p, pattern.vp, "the ${pattern.name} pattern")
-        s.galleryDeck += pattern.id
-        s.gallery[slot] = s.galleryDeck.removeAt(0)
-        Game.log(g, "Cuttlefish: a new Gallery card: ${Gallery[s.gallery[slot]].name}.")
+        val ruled = ruled(g)
+        val slots = s.gallery.indices.filter { Gallery[s.gallery[it]].met(g, ruled) }
+        for (slot in slots) {
+            val pattern = Gallery[s.gallery[slot]]
+            Game.scoreVp(g, p, pattern.vp, "the ${pattern.name} pattern")
+            if (g.winner != null) return
+        }
+        for (slot in slots) {
+            s.galleryDeck += s.gallery[slot]
+            s.gallery[slot] = s.galleryDeck.removeAt(0)
+            Game.log(g, "Cuttlefish: a new Gallery card: ${Gallery[s.gallery[slot]].name}.")
+        }
     }
 
     override fun removeWarriors(g: GameState, p: Int, reef: Int, n: Int, arrivals: Int) {
@@ -214,9 +289,12 @@ object CuttlefishRules : FactionRules {
         val s = st(g, p)
         val held = held(g)
         var v = Eval.onMap(g, id) * 1.5 + held.size * 2.5 + pigmentsOnMap(g) * 2.0
+        val ruled = ruled(g)
+        v += ruled.size * 2.0
         for (id in s.gallery) {
             val pattern = Gallery[id]
-            if (pattern.met(g, held)) v += pattern.vp * 4.0
+            if (pattern.met(g, ruled)) v += pattern.vp * 4.0
+            else if (pattern.met(g, held)) v += pattern.vp * 1.5
         }
         for (reef in held) if (g.reefs[reef].warriors(this.id) == 1) v -= Eval.threat(g, p, reef).coerceAtMost(3) * 0.5
         return v + Eval.hand(g, p, 1.6)

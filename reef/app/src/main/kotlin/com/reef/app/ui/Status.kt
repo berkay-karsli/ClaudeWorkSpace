@@ -50,11 +50,12 @@ fun FactionStatus(g: GameState, p: Int, version: Int) {
     key(version) {
         when (val s = g.players[p].fs) {
             is CuttlefishState -> {
-                val held = CuttlefishRules.held(g)
+                // Patterns are made of reefs the cuttlefish rule, and every one met scores at Dusk.
+                val ruled = CuttlefishRules.ruled(g)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     for (id in s.gallery) {
                         val pattern = Gallery[id]
-                        val met = pattern.met(g, held)
+                        val met = pattern.met(g, ruled)
                         Column(
                             Modifier.weight(1f).background(if (met) Color(0xFF1F4A3A) else Reef.raised, RoundedCornerShape(8.dp))
                                 .border(1.dp, if (met) Color(0xFF8BE07A) else Reef.line, RoundedCornerShape(8.dp)).padding(6.dp),
@@ -64,7 +65,7 @@ fun FactionStatus(g: GameState, p: Int, version: Int) {
                                 Text(pattern.name, color = Reef.ink, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f), maxLines = 1)
                                 VpCoin(pattern.vp)
                             }
-                            Text(pattern.text + if (met) " ✓" else "", color = if (met) Color(0xFF8BE07A) else Reef.muted, fontSize = 10.sp, lineHeight = 12.sp)
+                            Text(pattern.text + if (met) " ✓ scores at Dusk" else "", color = if (met) Color(0xFF8BE07A) else Reef.muted, fontSize = 10.sp, lineHeight = 12.sp)
                         }
                     }
                 }
@@ -111,6 +112,10 @@ fun FactionStatus(g: GameState, p: Int, version: Int) {
             is AnglersState -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                 val unlocked = AnglersRules.unlocked(s)
                 for (i in 0 until 4) ArtImage(Icons.lure, 20.dp, Modifier.alpha(if (i < unlocked) 1f else 0.3f))
+                if (s.hooked.isNotEmpty()) {
+                    Text("Hooked", color = Reef.muted, fontSize = 11.sp)
+                    for (f in s.hooked) Portrait(f, 20.dp, ring = 1.dp)
+                }
                 Text(
                     "${s.eaten} eaten" + when {
                         s.eaten < 4 -> " · 3rd lure at 4"

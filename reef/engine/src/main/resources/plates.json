@@ -5,7 +5,7 @@
    "name": "Sharks",
    "role": "Predator",
    "tagline": "Stop swimming and you drown.",
-   "idea": "Sharks own nothing and build nothing. They roam, they fight, and they score from the blood that every fight leaves behind.",
+   "idea": "Sharks own nothing and build nothing. They roam, they fight, and every fight leaves Blood in the water. Each Blood is a meal, a frenzy that brings more sharks, or something shiny to craft with.",
    "rules": [
     {
      "title": "Keep swimming",
@@ -20,12 +20,12 @@
      "text": "While sharks are in the game, any attack that removes a warrior leaves a Blood token in that reef, one per reef. Blood belongs to no one. Your sharks can move to a Blood reef up to two channels away, ignoring rule."
     }
    ],
-   "pieces": "10 sharks. 8 Blood tokens.",
+   "pieces": "12 sharks. 8 Blood tokens.",
    "setup": "3 sharks at any gate.",
    "turn": [
     {
      "phase": "Dawn",
-     "text": "Sharks arrive at one gate: 1, plus 1 for each Blood token on the map, up to 3."
+     "text": "1 shark arrives at any gate, or 2 if you have none on the map."
     },
     {
      "phase": "Day",
@@ -33,19 +33,24 @@
     },
     {
      "phase": "Dusk",
-     "text": "Feed, then any shark that stayed still drowns."
+     "text": "Each Blood in a reef with your sharks: feed on it, or frenzy (remove it and 2 sharks arrive there, as if they had moved). Then any shark that stayed still drowns."
     }
    ],
    "scores": [
-    "At Dusk, remove every Blood token in a reef with your sharks: 2 VP each."
+    "Feeding on a Blood at Dusk: 2 VP."
    ],
-   "verbs": {
-    "Move": true,
-    "Battle": true,
-    "Build": false,
-    "Recruit": true,
-    "Craft": false
+   "ways": {
+    "Move": "Hunt: move, then maybe battle",
+    "Battle": "Hunt, two hits per shark",
+    "Recruit": "1 a Dawn, 2 per frenzy",
+    "Craft": "Blood, eaten when used"
    },
+   "choice": "Every Blood is 2 VP, 2 more sharks, or gear. Never more than one of them.",
+   "quirk": {
+    "title": "Open ocean",
+    "text": "Sharks at a gate can swim to any other gate as one move. They dive out of the reef and turn up on the far side."
+   },
+   "craft": "Blood in a reef with your sharks pays that reef's suit. Crafting eats it, for no VP.",
    "complexity": 1,
    "reach": 9
   },
@@ -54,15 +59,15 @@
    "name": "Sardines",
    "role": "Racer",
    "tagline": "Ten thousand fish, one direction.",
-   "idea": "A race across the map. Schools come in through one gate and score by leaving through another. Sardines never start a fight and never stay long.",
+   "idea": "A race across the map. Schools come in through one gate and score by leaving through another. The bigger the school, the more it scores, but the longer it stays, the more gets eaten. A big enough school shoves everyone out of its way.",
    "rules": [
     {
      "title": "The run",
-     "text": "At Dawn, 3 sardines arrive at any gate, plus 1 for each card of that gate's suit you discard. The game remembers the gate every fish came in by."
+     "text": "At Dawn, 3 sardines arrive at any gate. The game remembers the gate every fish came in by. Fish that rally count as coming in by the gate most of their school came in by."
     },
     {
      "title": "One school",
-     "text": "A move takes all your sardines in a reef together, up to two channels, ignoring rule."
+     "text": "A move takes all your sardines in a reef together, up to two channels, ignoring rule. A school of 6 or more can mob: battle, dealing at most 1 hit for every 3 fish."
     },
     {
      "title": "Bait ball",
@@ -78,7 +83,7 @@
     },
     {
      "phase": "Day",
-     "text": "3 actions: move."
+     "text": "3 actions: move, mob, or rally (discard a card: 2 sardines join a school in a reef of the card's suit)."
     },
     {
      "phase": "Dusk",
@@ -88,26 +93,31 @@
    "scores": [
     "At Dusk, sardines on a gate they didn't come in by may leave: 1–3 fish score 1 VP, 4–6 score 2, 7–9 score 4, 10 or more score 6. They go back to your supply."
    ],
-   "verbs": {
-    "Move": true,
-    "Battle": false,
-    "Build": false,
-    "Recruit": true,
-    "Craft": false
+   "ways": {
+    "Move": "The whole school, two channels",
+    "Battle": "Mob with a school of 6+",
+    "Recruit": "The run, and rallies",
+    "Craft": "Schools of 4 or more"
    },
+   "choice": "Cash a school in now, or grow it for a bigger payout while everything hunts it.",
+   "quirk": {
+    "title": "Wall of fish",
+    "text": "Right after a school of 6 or more arrives, you may push one faction that has fewer warriors there: all its warriors there move to a neighboring reef of your choice."
+   },
+   "craft": "Each reef with 4 or more of your sardines pays its suit.",
    "complexity": 1,
-   "reach": 2
+   "reach": 4
   },
   {
    "key": "lionfish",
    "name": "Lionfish",
    "role": "Invader",
    "tagline": "Nothing here eats us.",
-   "idea": "An invasive species with no natural enemies on this reef. Two fish slip in at the start. They breed every turn and eat whatever they outnumber.",
+   "idea": "An invasive species with no natural enemies on this reef. Lionfish breed every turn and eat whatever they outnumber, then sit there, too stuffed to move.",
    "rules": [
     {
      "title": "Breed",
-     "text": "At Dusk, add 1 lionfish to each reef where you have 2 or more. At Dawn, if you have fewer than 2 lionfish on the map, 2 more arrive at any gate."
+     "text": "At Dusk, each reef with 3 or more of your lionfish breeds 1 lionfish, placed there or in a neighboring reef. At Dawn, if you have fewer than 2 lionfish on the map, 2 more arrive at any gate."
     },
     {
      "title": "Gorge",
@@ -127,7 +137,7 @@
     },
     {
      "phase": "Day",
-     "text": "3 actions: move or gorge."
+     "text": "3 actions: move, battle, gorge, or release once (discard a card: 2 lionfish arrive at any gate)."
     },
     {
      "phase": "Dusk",
@@ -136,15 +146,20 @@
    ],
    "scores": [
     "1 VP for each warrior your gorging removes.",
-    "At Dusk, after breeding, 1 VP per reef where you have 4 or more lionfish and no other faction has warriors."
+    "At Dusk, after breeding, 1 VP per reef where you have 6 or more lionfish and no other faction has warriors."
    ],
-   "verbs": {
-    "Move": true,
-    "Battle": false,
-    "Build": false,
-    "Recruit": true,
-    "Craft": false
+   "ways": {
+    "Move": "Standard moves",
+    "Battle": "Gorge with no dice, or battle",
+    "Recruit": "Breed, or release",
+    "Craft": "Reefs you hold alone"
    },
+   "choice": "Spread out to breed everywhere, or pile up to hold reefs alone. Gorge now and sit stuffed, or keep moving.",
+   "quirk": {
+    "title": "Stuffed",
+    "text": "After gorging, your lionfish in that reef can't move or gorge again for the rest of the turn. A lionfish's stomach can stretch to thirty times its size."
+   },
+   "craft": "Each reef where 3 or more of your lionfish are the only warriors pays its suit.",
    "complexity": 1,
    "reach": 8
   },
@@ -153,15 +168,15 @@
    "name": "Starfish",
    "role": "Outbreak",
    "tagline": "Cut one, two grow back.",
-   "idea": "A plague that eats reefs down to rubble. Starfish never start a fight. They crawl in, strip the reef bare, and hitting them only makes more.",
+   "idea": "A plague that eats reefs down to rubble. Starfish crawl toward anything built, eat it, and leave Rubble behind. Hitting them only makes more.",
    "rules": [
     {
-     "title": "Strip",
-     "text": "At Dusk, in each reef with 3 or more of your starfish, an empty slot and none of your Rubble, put Rubble in that slot. Rubble is a token that blocks the slot for everyone."
+     "title": "Devour",
+     "text": "An action in a reef with 3 or more of your starfish: remove an enemy building there, or put Rubble in an empty slot if none of your Rubble is there yet. Rubble is a token that fills its slot for everyone."
     },
     {
-     "title": "Regrow",
-     "text": "After any attack that removes your starfish, 2 starfish regrow in the neighboring reef where you have the most starfish."
+     "title": "Drawn to food",
+     "text": "Your starfish can move into a reef with an enemy building, ignoring rule."
     },
     {
      "title": "Spawn",
@@ -177,36 +192,42 @@
     },
     {
      "phase": "Day",
-     "text": "2 actions: move."
+     "text": "2 actions: move, battle or devour."
     },
     {
      "phase": "Dusk",
-     "text": "Strip, then score."
+     "text": "Score."
     }
    ],
    "scores": [
+    "1 VP per building devoured, like any building removed.",
     "At Dusk, 1 VP for every 2 reefs that have your Rubble, rounded up."
    ],
-   "verbs": {
-    "Move": true,
-    "Battle": false,
-    "Build": false,
-    "Recruit": true,
-    "Craft": false
+   "ways": {
+    "Move": "Crawl, drawn to buildings",
+    "Battle": "Devour, or battle",
+    "Recruit": "Spawn, and regrow when hit",
+    "Craft": "Your Rubble"
    },
+   "choice": "Eat a building for a point now, or lay Rubble that pays every Dusk. Two actions: eat here, or crawl to the next meal.",
+   "quirk": {
+    "title": "Cut in half",
+    "text": "After any attack removes your starfish, 2 starfish regrow in the neighboring reef where you have the most. Divers once chopped them up to kill them."
+   },
+   "craft": "Your Rubble pays its reef's suit.",
    "complexity": 1,
-   "reach": 5
+   "reach": 6
   },
   {
    "key": "coral",
    "name": "Coral",
    "role": "Builder",
    "tagline": "We never move. We grow.",
-   "idea": "A living reef. It can't take a step or start a fight. It spreads by spawning into neighboring reefs and scores by growing.",
+   "idea": "A living reef. It can't take a step, but it spreads by spawning, stings whatever comes too close, and fish shelter in it. Grow tall for points, or leave room for visitors who pay you every Dusk.",
    "rules": [
     {
      "title": "Rooted",
-     "text": "Polyps never move, not even along currents."
+     "text": "Polyps never move, not even along currents or when pushed."
     },
     {
      "title": "Spawn",
@@ -226,33 +247,38 @@
     },
     {
      "phase": "Day",
-     "text": "3 actions: grow (discard a card of the reef's suit to build a coral in an empty slot of a reef you rule) or spawn."
+     "text": "3 actions: grow (discard a card of the reef's suit to build a coral in an empty slot of a reef you rule), spawn, or battle."
     },
     {
      "phase": "Dusk",
-     "text": "Draw 1 extra card per 5 coral on the map."
+     "text": "Score the Nursery. Draw 1 extra card per 5 coral on the map."
     }
    ],
    "scores": [
-    "Each coral scores when grown: 1, 1, 1, 2, 2, 2, 3 and so on.",
-    "Gear crafted by your coral."
+    "Each coral scores when grown: 1 VP for every 4 coral on the map, at least 1.",
+    "Nursery: at Dusk, 1 VP per reef with your coral where another faction has warriors."
    ],
-   "verbs": {
-    "Move": false,
-    "Battle": false,
-    "Build": true,
-    "Recruit": true,
-    "Craft": true
+   "ways": {
+    "Move": "Spawn into neighbors; never moves",
+    "Battle": "Polyps sting in a battle",
+    "Recruit": "Spawn",
+    "Craft": "Reefs with your coral"
    },
+   "choice": "Grow this turn, or bleach a coral for cards and grow bigger later. Crowd visitors out, or let them in for Nursery points, knowing they might wreck you.",
+   "quirk": {
+    "title": "Bleach",
+    "text": "In a turn when you don't grow, you may take one of your coral out of the game to draw 2 cards. Stressed coral spits out its algae, turns white and dies."
+   },
+   "craft": "Each reef with your coral pays its suit, however many coral it has.",
    "complexity": 2,
-   "reach": 4
+   "reach": 5
   },
   {
    "key": "jellyfish",
    "name": "Jellyfish",
    "role": "Drifter",
    "tagline": "We can't steer. We bend the current.",
-   "idea": "You never move a jellyfish. They drift every turn, and all you control is the current that carries them. Whatever swims into them gets stung.",
+   "idea": "You never steer a jellyfish. They drift every turn, and all you control is the current that carries them. Whatever swims into them gets stung, and even a dead jellyfish comes back.",
    "rules": [
     {
      "title": "Drift",
@@ -267,16 +293,16 @@
      "text": "When another faction moves warriors into a reef with 2 or more of your jellyfish, by any kind of movement, it takes 1 hit, which removes one of the arrivals."
     }
    ],
-   "pieces": "24 jellyfish. 4 current arrows (channel markers).",
+   "pieces": "24 jellyfish. 4 current arrows (channel markers). 4 cysts (tokens).",
    "setup": "3 jellyfish in each of two reefs on the Gyre.",
    "turn": [
     {
      "phase": "Dawn",
-     "text": "Nothing."
+     "text": "Cysts become jellyfish."
     },
     {
      "phase": "Day",
-     "text": "Place or turn up to 2 arrows. Then bloom: discard up to 2 cards, and each adds 1 jellyfish to every reef of its suit where you have jellyfish (Moon: every such reef). With no jellyfish on the map, a bloom puts 3 jellyfish into one reef of its suit instead."
+     "text": "Place or turn up to 2 arrows. Bloom up to twice: discard a card, and 1 jellyfish joins every reef of its suit where you have jellyfish (Moon: every such reef); with none on the map, 3 bloom in one reef of its suit. Pulse once: battle in a reef with 3 or more of your jellyfish."
     },
     {
      "phase": "Dusk",
@@ -287,22 +313,27 @@
     "1 VP each time a sting removes a warrior.",
     "At Dusk, after drifting, 1 VP per reef with 3 or more of your jellyfish, 2 VP if it has 6 or more."
    ],
-   "verbs": {
-    "Move": false,
-    "Battle": false,
-    "Build": false,
-    "Recruit": true,
-    "Craft": false
+   "ways": {
+    "Move": "Drift on currents you set",
+    "Battle": "Pulse once a turn from a swarm",
+    "Recruit": "Bloom, and cysts",
+    "Craft": "Swarms of 3 or more"
    },
+   "choice": "Aim the currents at enemies to sting them, or hold your swarms still to score.",
+   "quirk": {
+    "title": "Immortal",
+    "text": "When an attack removes the last of your jellyfish in a reef, leave a cyst token there. At your Dawn, each cyst becomes 2 jellyfish."
+   },
+   "craft": "Each reef with 3 or more of your jellyfish pays its suit.",
    "complexity": 2,
-   "reach": 5
+   "reach": 6
   },
   {
    "key": "parrotfish",
    "name": "Parrotfish",
    "role": "Terraformer",
    "tagline": "Every beach was a reef once.",
-   "idea": "Parrotfish chew the reef into sand, then use the sand to reshape the map. Sandbars cut channels, and islands rise out of the sea.",
+   "idea": "Parrotfish chew the reef into sand and use the sand to reshape the map. Sandbars cut channels and islands rise out of the sea. At night they sleep in a bubble of their own slime.",
    "rules": [
     {
      "title": "Graze",
@@ -314,10 +345,10 @@
     },
     {
      "title": "Island",
-     "text": "Spend 5 Sand to raise an island in a reef you rule that touches 2 of your sandbars. You rule it for the rest of the game, your parrotfish there can't be attacked, and the island can't be removed."
+     "text": "Spend 4 Sand to raise an island in a reef you rule that touches 2 of your sandbars. You rule it for the rest of the game, your parrotfish there can't be attacked, and the island can't be removed."
     }
    ],
-   "pieces": "16 parrotfish. 8 sandbars (channel markers). 3 islands.",
+   "pieces": "16 parrotfish. 8 sandbars (channel markers). 3 islands. 1 cocoon (token).",
    "setup": "4 parrotfish at any gate.",
    "turn": [
     {
@@ -330,20 +361,25 @@
     },
     {
      "phase": "Dusk",
-     "text": "Score islands."
+     "text": "Score islands. Your old cocoon opens, and you may spin a new one."
     }
    ],
    "scores": [
-    "1 VP per sandbar placed, 2 VP per island raised.",
+    "1 VP per sandbar placed, 3 VP per island raised.",
     "At Dusk, 1 VP per island."
    ],
-   "verbs": {
-    "Move": true,
-    "Battle": true,
-    "Build": false,
-    "Recruit": true,
-    "Craft": false
+   "ways": {
+    "Move": "Standard moves",
+    "Battle": "Standard battles",
+    "Recruit": "2 a Dawn where you rule",
+    "Craft": "Islands, or 3 Sand"
    },
+   "choice": "Sand builds sandbars and islands, or buys gear. A cocoon keeps a reef safe but pins it for a turn.",
+   "quirk": {
+    "title": "Pajamas",
+    "text": "At Dusk, you may wrap your parrotfish in one reef you rule in a slime cocoon. Until your next Dusk they can't be attacked or pushed, and they can't move."
+   },
+   "craft": "Your islands pay their suit, and 3 Sand pays any suit.",
    "complexity": 2,
    "reach": 7
   },
@@ -352,7 +388,7 @@
    "name": "Sea Turtles",
    "role": "Wanderer",
    "tagline": "Go far. Come home.",
-   "idea": "Four old turtles swim far out to feed, then come home to lay eggs on the shore. The eggs stay behind, and everyone can see the nest.",
+   "idea": "Four old turtles swim far out to feed, riding the currents, then come home to lay eggs on the shore. Every hatchling has to dash past whatever is waiting on the beach.",
    "rules": [
     {
      "title": "Shell",
@@ -360,11 +396,11 @@
     },
     {
      "title": "Wander",
-     "text": "Turtles move one at a time, one channel per move, ignoring rule."
+     "text": "Turtles move one at a time, one channel per move, ignoring rule. A turtle can also ride a current as far as it flows, as one move."
     },
     {
      "title": "Feed and lay",
-     "text": "A turtle away from the shore can feed: it takes a Food of the reef's suit, at most one of each suit. A turtle at your nest lays 1 egg per Food it carries, plus 1, using the Food up."
+     "text": "A turtle away from the shore can feed: it takes a Food of the reef's suit, at most one of each suit. A turtle at your nest lays 1 egg per Food it carries, plus 2, using the Food up."
     }
    ],
    "pieces": "4 turtles. 3 nests (buildings). 10 eggs (tokens).",
@@ -376,7 +412,7 @@
     },
     {
      "phase": "Day",
-     "text": "3 actions: move, feed, lay, or build a nest in an empty slot of a shore reef where you have a turtle."
+     "text": "3 actions: move, battle, feed, lay, or build a nest in an empty slot of a shore reef where you have a turtle."
     },
     {
      "phase": "Dusk",
@@ -384,33 +420,38 @@
     }
    ],
    "scores": [
-    "1 VP per egg laid, and 1 VP more when it hatches. Nests score when built: 1, 2, 3.",
-    "Gear crafted at your nests."
+    "1 VP per egg laid, and 1 VP more when it hatches.",
+    "Nests score when built: 1, 2, 3."
    ],
-   "verbs": {
-    "Move": true,
-    "Battle": false,
-    "Build": true,
-    "Recruit": true,
-    "Craft": true
+   "ways": {
+    "Move": "One turtle at a time, or ride a current",
+    "Battle": "Standard battles, shell first",
+    "Recruit": "Hatchlings become turtles",
+    "Craft": "Nests, or Food"
    },
+   "choice": "Food makes eggs or pays for gear. Lay at the safe nest far away, or the close one with enemies on the beach.",
+   "quirk": {
+    "title": "Hatchling dash",
+    "text": "An egg that hatches in a reef with enemy warriors is eaten on its way to the sea: it scores you nothing, and the faction that rules that reef scores 1 VP."
+   },
+   "craft": "Your nests pay their reef's suit. Each Food a turtle carries pays its suit and is used up.",
    "complexity": 2,
-   "reach": 2
+   "reach": 3
   },
   {
    "key": "snake",
    "name": "Sea Snake",
    "role": "Serpent",
    "tagline": "The more it eats, the longer it gets.",
-   "idea": "One snake with one long body stretched across the map. It grows only by eating, and a single hit in the middle can cut it in two.",
+   "idea": "One snake with one long body stretched across the map. It grows by eating and by shedding its skin, and it coils around whatever it catches. A single hit in the middle can cut it in two.",
    "rules": [
     {
      "title": "One body",
-     "text": "Your Head and segments form a line, each piece in the same reef as the piece ahead of it or next to it. To slither, move the Head one channel, ignoring rule; each segment moves to where the piece ahead of it was."
+     "text": "Your Head and segments form a line, each piece in the same reef as the piece ahead of it or next to it. To slither, move the Head one channel, ignoring rule; each segment moves to where the piece ahead of it was. Your pieces can't be pushed."
     },
     {
      "title": "Grow",
-     "text": "For each enemy warrior your bite removes, add a segment at your tail. At Dawn, a snake with fewer than 4 pieces adds a segment."
+     "text": "For each enemy warrior your bites and coils remove, add a segment at your tail. At Dawn, a snake with fewer than 4 pieces adds a segment."
     },
     {
      "title": "Cut",
@@ -426,7 +467,7 @@
     },
     {
      "phase": "Day",
-     "text": "2 actions, or 3 once you have 8 segments: slither, or bite (battle in the Head's reef)."
+     "text": "2 actions, or 3 once you have 9 pieces: slither, bite (battle in the Head's reef), or molt (discard a card: add 2 segments)."
     },
     {
      "phase": "Dusk",
@@ -436,22 +477,27 @@
    "scores": [
     "At Dusk, 1 VP for every 2 reefs your snake is in, rounded up."
    ],
-   "verbs": {
-    "Move": true,
-    "Battle": true,
-    "Build": false,
-    "Recruit": true,
-    "Craft": false
+   "ways": {
+    "Move": "Slither the Head",
+    "Battle": "Bite at the Head, or coil",
+    "Recruit": "Grow by eating, or molt",
+    "Craft": "Shed tail segments"
    },
+   "choice": "Stretch out for points, or coil back on yourself to squeeze. Shed your tail for gear, or keep the length for actions.",
+   "quirk": {
+    "title": "Coil",
+    "text": "When your Head slithers into a reef where the rest of your body already is, every other faction's warriors there take 1 hit."
+   },
+   "craft": "Shed your tail: each segment you take off the end of your snake pays any suit. You can't shed the Head.",
    "complexity": 2,
-   "reach": 6
+   "reach": 7
   },
   {
    "key": "remoras",
    "name": "Remoras",
    "role": "Hitchhiker",
    "tagline": "Why swim when you can ride?",
-   "idea": "Remoras don't fight, build or hold ground. They stick to other factions' warriors, go where they go, and eat the scraps of every kill.",
+   "idea": "Remoras don't hold ground. They stick to other factions, go where they go, clean them for a fee and pile into their fights.",
    "rules": [
     {
      "title": "Attach",
@@ -459,14 +505,14 @@
     },
     {
      "title": "Tiny",
-     "text": "Remoras never count for rule. Free remoras move ignoring rule."
+     "text": "Remoras never count for rule, and free remoras move ignoring rule. They only play in games with at least two other factions."
     },
     {
-     "title": "Company",
-     "text": "Remoras only play in games with at least two other factions."
+     "title": "Pile on",
+     "text": "When a faction you ride starts a battle, your remoras on it in that reef add 1 hit each, up to 2."
     }
    ],
-   "pieces": "10 remoras.",
+   "pieces": "8 remoras.",
    "setup": "3 remoras at any gate.",
    "turn": [
     {
@@ -475,7 +521,7 @@
     },
     {
      "phase": "Day",
-     "text": "3 actions: swim (move free remoras one channel), attach, or let go."
+     "text": "3 actions: swim (move free remoras one channel), attach, let go, clean, or hitch (discard a card: 2 new remoras attach to a faction's warriors in a reef of the card's suit)."
     },
     {
      "phase": "Dusk",
@@ -484,24 +530,29 @@
    ],
    "scores": [
     "1 VP each time a faction you ride removes pieces of a faction other than yours, once per attack.",
-    "At Dusk, 1 VP per faction you ride."
+    "At Dusk, 1 VP per faction that 2 or more of your remoras ride."
    ],
-   "verbs": {
-    "Move": true,
-    "Battle": false,
-    "Build": false,
-    "Recruit": true,
-    "Craft": false
+   "ways": {
+    "Move": "Swim free, or ride along",
+    "Battle": "Pile into your host's battles",
+    "Recruit": "1 a Dawn, and hitch",
+    "Craft": "Reefs where you ride"
    },
+   "choice": "Ride the fiercest fighter for scraps, or as many factions as you can for Dusk points. Cleaning feeds you both: is that host worth feeding?",
+   "quirk": {
+    "title": "Cleaning station",
+    "text": "Once per turn, an action in a reef where your remoras ride a faction: that faction draws a card, and so do you."
+   },
+   "craft": "Each reef where 3 or more of your remoras ride pays its suit.",
    "complexity": 2,
-   "reach": 1
+   "reach": 3
   },
   {
    "key": "crabs",
    "name": "Hermit Crabs",
    "role": "Merchant",
    "tagline": "Every shell has a price.",
-   "idea": "The reef's only shell shop. Other factions buy shells to protect their warriors, and every card they pay becomes an action for the crabs.",
+   "idea": "The reef's only shell shop. Other factions buy shells to protect their warriors, and every card they pay becomes an action for the crabs. And whenever someone's home is wrecked, a crab moves in.",
    "rules": [
     {
      "title": "Shell shop",
@@ -516,7 +567,7 @@
      "text": "Your crabs can wear shells from your pool for free, the same way."
     }
    ],
-   "pieces": "12 crabs. 4 markets (buildings). 8 shells.",
+   "pieces": "12 crabs. 5 markets (buildings). 8 shells.",
    "setup": "1 market and 4 crabs in any reef.",
    "turn": [
     {
@@ -525,7 +576,7 @@
     },
     {
      "phase": "Day",
-     "text": "Actions, one Till card each: move, recruit (2 crabs at a market, or at any gate if you have no market), or build a market in a reef you rule (the Till card must match the reef's suit)."
+     "text": "Actions, one Till card each: move, battle, recruit (3 crabs at a market, or at any gate if you have no market), or build a market in a reef you rule (the Till card must match the reef's suit)."
     },
     {
      "phase": "Dusk",
@@ -533,25 +584,29 @@
     }
    ],
    "scores": [
-    "At Dusk, 1 VP per market on the map.",
-    "Gear crafted at your markets."
+    "At Dusk, 1 VP per market on the map."
    ],
-   "verbs": {
-    "Move": true,
-    "Battle": false,
-    "Build": true,
-    "Recruit": true,
-    "Craft": true
+   "ways": {
+    "Move": "Standard moves, one Till card",
+    "Battle": "Standard battles, one Till card",
+    "Recruit": "3 crabs at a market",
+    "Craft": "Your markets"
    },
+   "choice": "Price shells high to bank fewer, richer sales, or low to sell more. Every Till card is an action or a market.",
+   "quirk": {
+    "title": "Vacancy chain",
+    "text": "When another faction's building is removed from a reef with your crabs, one of your markets moves into the empty slot for free."
+   },
+   "craft": "Your markets pay their reef's suit.",
    "complexity": 3,
-   "reach": 4
+   "reach": 5
   },
   {
    "key": "anglers",
    "name": "Anglerfish",
    "role": "Trapper",
    "tagline": "Follow the light.",
-   "idea": "They live in the Trench and never swim the reef. They hang lures with real rewards over it and eat whoever stays too long.",
+   "idea": "They live in the Trench and never swim the reef. They hang lures with real rewards over it, and whoever takes the bait is hooked.",
    "rules": [
     {
      "title": "Lures",
@@ -585,26 +640,31 @@
    "scores": [
     "1 VP per enemy warrior your snaps remove."
    ],
-   "verbs": {
-    "Move": false,
-    "Battle": true,
-    "Build": false,
-    "Recruit": true,
-    "Craft": false
+   "ways": {
+    "Move": "Move your lures",
+    "Battle": "Snap from the Trench",
+    "Recruit": "Discard for anglers",
+    "Craft": "Lures, which go dark"
    },
+   "choice": "Treasure hooks a faction so you can snap it anywhere, Shelter protects whoever you want alive, Glory draws rulers in. Snap big to eat more, or small to keep anglers for tomorrow.",
+   "quirk": {
+    "title": "Hooked",
+    "text": "A faction that takes a Treasure lure's card is hooked until your next Dusk: you can snap at it in any reef."
+   },
+   "craft": "A lure pays its reef's suit, then goes dark: no offer, and no snap there, until you relight it at Dawn.",
    "complexity": 3,
-   "reach": 5
+   "reach": 6
   },
   {
    "key": "octopus",
    "name": "Octopus",
    "role": "Programmer",
    "tagline": "Eight arms. Eight opinions.",
-   "idea": "One giant octopus whose eight arms think for themselves. Each arm keeps a standing order and carries it out every turn, in number order, whether or not it still makes sense. Whatever the arms steal goes into the octopus's garden.",
+   "idea": "One giant octopus whose eight arms think for themselves. Each arm keeps a standing order and carries it out every turn, in number order. Whatever the arms steal goes into the garden, and when trouble comes, the octopus inks and jets away.",
    "rules": [
     {
      "title": "Orders",
-     "text": "At Dawn, put 1 or 2 cards under arms with no order. The suit is the order. Kelp: reach, move that arm one channel, ignoring rule. Sponge: grab, battle in its reef. Pearl: steal, take an enemy token from its reef, or a random card from a faction with pieces there, into your garden. Moon: pick each time."
+     "text": "At Dawn, put 1 or 2 cards under arms with no order, and you may swap the orders of two arms. The suit is the order. Kelp: reach, move that arm one channel, ignoring rule. Sponge: grab, battle in its reef. Pearl: steal, take an enemy token from its reef, or a random card from a faction with pieces there, into your garden. Moon: pick each time."
     },
     {
      "title": "Recoil",
@@ -620,7 +680,7 @@
    "turn": [
     {
      "phase": "Dawn",
-     "text": "Add orders."
+     "text": "Add orders, and swap two if you like."
     },
     {
      "phase": "Day",
@@ -635,13 +695,18 @@
     "Each treasure scores 1 VP when stolen, token or card.",
     "At Dusk, 1 VP per kind of treasure in your garden: each token type, and each suit of stolen card. If the Mantle is removed, the garden is lost and the Mantle returns at Dawn beside any arm, or at any gate if no arm is left."
    ],
-   "verbs": {
-    "Move": true,
-    "Battle": true,
-    "Build": false,
-    "Recruit": true,
-    "Craft": false
+   "ways": {
+    "Move": "Reach orders; the Mantle jets",
+    "Battle": "Grab orders",
+    "Recruit": "Lost arms regrow",
+    "Craft": "Spend garden treasures"
    },
+   "choice": "Program the arms well and they run themselves. Spend treasures on gear, or keep them for the garden.",
+   "quirk": {
+    "title": "Ink",
+    "text": "When battled, you may discard a card: the battle ends before any hits, and your pieces there jet to a neighboring reef."
+   },
+   "craft": "Garden treasures: a stolen card pays its suit, a stolen token pays any suit. Crafting spends them.",
    "complexity": 4,
    "reach": 7
   },
@@ -650,7 +715,7 @@
    "name": "Cuttlefish",
    "role": "Illusionist",
    "tagline": "Trust your eyes. Everyone else does.",
-   "idea": "Cuttlefish change color in a heartbeat. They repaint reefs to a new suit for every faction, and score by painting patterns across the map.",
+   "idea": "Cuttlefish change color in a heartbeat. They repaint reefs to a new suit for every faction, hypnotize whatever stands in the way, and score by ruling patterns across the map.",
    "rules": [
     {
      "title": "Paint",
@@ -662,7 +727,7 @@
     },
     {
      "title": "Galleries",
-     "text": "Three face-up Gallery cards each show a pattern, such as three connected reefs of one suit. At Dusk, score one pattern on the map that has your cuttlefish in each of its reefs, then replace it."
+     "text": "Three face-up Gallery cards each show a pattern, such as three connected reefs of one suit. At Dusk, score every pattern made of reefs you rule, then replace each one you scored."
     }
    ],
    "pieces": "12 cuttlefish. 6 pigments (tokens, 2 per suit).",
@@ -674,7 +739,7 @@
     },
     {
      "phase": "Day",
-     "text": "3 actions: move or paint."
+     "text": "3 actions: move, battle, paint, hypnotize, or hatch (discard a card: 2 cuttlefish in a reef of its suit where you have cuttlefish, or in any reef of its suit if you have none on the map)."
     },
     {
      "phase": "Dusk",
@@ -682,17 +747,22 @@
     }
    ],
    "scores": [
-    "One pattern per Dusk, worth 2 to 4 VP."
+    "At Dusk, every Gallery pattern you rule scores its 2 or 3 VP."
    ],
-   "verbs": {
-    "Move": true,
-    "Battle": false,
-    "Build": false,
-    "Recruit": true,
-    "Craft": false
+   "ways": {
+    "Move": "Standard moves",
+    "Battle": "Standard battles",
+    "Recruit": "Hatch, and pigments",
+    "Craft": "Your pigments"
    },
+   "choice": "Paint toward your own patterns, hypnotize rivals out of the reefs you need, or hatch more cuttlefish to hold them.",
+   "quirk": {
+    "title": "Hypnotize",
+    "text": "Discard a card: move up to 3 warriors of another faction from a reef with your cuttlefish to a neighboring reef. Cuttlefish hunt by rippling stripes until the prey freezes."
+   },
+   "craft": "Your pigments pay their suit.",
    "complexity": 4,
-   "reach": 3
+   "reach": 5
   }
  ],
  "shared": [
@@ -714,7 +784,7 @@
   },
   {
    "title": "Rule and moving",
-   "text": "You rule a reef when you have the most warriors and buildings there; a tie means nobody does. A move takes any number of your warriors to a neighboring reef, and you must rule where you leave or where you arrive. Placing pieces from your supply isn't moving."
+   "text": "You rule a reef when you have the most warriors and buildings there; a tie means nobody does. A move takes any number of your warriors to a neighboring reef, and you must rule where you leave or where you arrive. Placing pieces from your supply isn't moving. A push moves another faction's warriors for it, ignoring rule; it counts as that faction's move."
   },
   {
    "title": "Currents",
@@ -734,7 +804,7 @@
   },
   {
    "title": "Gear",
-   "text": "Each building can craft once per turn, paying with its reef's suit. Gear scores points and gives a small lasting bonus. Factions without buildings can't craft."
+   "text": "Every faction crafts. Its plate names its crafting pieces, and each piece pays one suit, once per turn. Pay a gear card's cost to craft it: score its VP and keep its lasting bonus."
   },
   {
    "title": "Winning",

@@ -10,6 +10,8 @@ object AnglersRules : FactionRules {
     const val TREASURE = "Treasure"
     const val SHELTER = "Shelter"
     const val GLORY = "Glory"
+    /** A lure spent on crafting: it offers nothing until it is relit at Dawn. */
+    const val DARK = "Dark"
     val offers = listOf(TREASURE, SHELTER, GLORY)
     const val MAX_SNAP = 3
     const val SNAPS_PER_DUSK = 2
@@ -21,7 +23,14 @@ object AnglersRules : FactionRules {
     private fun st(g: GameState, p: Int) = g.players[p].fs as AnglersState
 
     override fun dawnHint(g: GameState, p: Int) = "hang or move your lures and pick what each one offers."
-    override fun duskHint(g: GameState, p: Int) = "snap at up to 2 lure or rim reefs with enemy warriors."
+    override fun duskHint(g: GameState, p: Int) = "snap at up to 2 lure or rim reefs with enemy warriors, or anywhere at a hooked faction."
+
+    /** A faction that took the bait is hooked until the anglers' next Dusk. */
+    fun hook(g: GameState, f: FactionId) {
+        val s = g.state<AnglersState>(id) ?: return
+        if (f == id || !s.hooked.add(f)) return
+        Game.log(g, "Anglerfish: the ${f.display} are hooked.")
+    }
 
     /** Rim reefs and their neighbors. */
     val lureReefs: List<Int> = Board.reefs.filter { r -> r.rim || Board.neighbors(r.id).any { Board.reefs[it].rim } }.map { it.id }
@@ -97,17 +106,19 @@ object AnglersRules : FactionRules {
         Game.log(g, "Anglerfish: discard ${Cards[c].name}, $n ${warriorNoun(n)} join the Trench (${s.trench}).")
     }
 
-    /** Reefs where a snap can rise: lure reefs and rim reefs. */
-    fun snapReefs(g: GameState): List<Int> = g.reefs.indices.filter { lureAt(g, it) != null || Board.reefs[it].rim }
+    /** Reefs where a snap can rise: lit lure reefs and rim reefs. */
+    fun snapReefs(g: GameState): List<Int> = g.reefs.indices.filter { lureAt(g, it)?.let { l -> l.variant != DARK } == true || Board.reefs[it].rim }
 
     override fun duskOptions(g: GameState, p: Int): List<Option> {
         val s = st(g, p)
         if (s.snapsDone || s.trench == 0 || s.snapped.size >= SNAPS_PER_DUSK) return emptyList()
         val out = mutableListOf<Option>()
-        for (reef in snapReefs(g)) {
+        val lured = snapReefs(g).toSet()
+        for (reef in g.reefs.indices) {
             if (reef in s.snapped) continue
             for (prey in Game.battleTargets(g, p, reef)) {
                 if (g.reefs[reef].warriors(prey) == 0) continue
+                if (reef !in lured && prey !in s.hooked) continue
                 for (n in minOf(MAX_SNAP, s.trench) downTo 1) out += Snap(reef, prey, n)
             }
         }
@@ -125,6 +136,21 @@ object AnglersRules : FactionRules {
             }
             else -> s.snapsDone = true
         }
+    }
+
+    override fun duskAuto(g: GameState, p: Int) {
+        st(g, p).hooked.clear()
+    }
+
+    /** A lit lure pays its reef's suit, and goes dark. */
+    override fun craftUnits(g: GameState, p: Int) =
+        g.reefs.indices.filter { lureAt(g, it)?.variant.let { v -> v != null && v != DARK } }.map { CraftUnit("lure:$it", g.suitOf(it), spend = true) }
+
+    override fun spendCraftUnit(g: GameState, p: Int, unit: CraftUnit) {
+        val reef = unit.key.removePrefix("lure:").toInt()
+        val rs = g.reefs[reef]
+        rs.pieces[rs.pieces.indexOf(lureAt(g, reef))] = Piece(id, PieceType.LURE, variant = DARK)
+        Game.log(g, "Anglerfish: the lure over ${Board.name(reef)} goes dark to pay for crafting.")
     }
 
     /** After a snap, surviving anglers sink back into the Trench. */
@@ -157,16 +183,18 @@ object AnglersRules : FactionRules {
 
     override fun supplySummary(g: GameState, p: Int): String {
         val s = st(g, p)
-        return "${s.trench} in the Trench · ${luresOnMap(g)} of ${unlocked(s)} lures out · ${s.eaten} eaten"
+        val hooked = if (s.hooked.isEmpty()) "" else " · hooked: " + s.hooked.joinToString { it.display }
+        return "${s.trench} in the Trench · ${luresOnMap(g)} of ${unlocked(s)} lures out · ${s.eaten} eaten$hooked"
     }
 
     override fun value(g: GameState, p: Int, self: Boolean): Double {
         val s = st(g, p)
         var v = s.trench * 3.0 + s.supply * 0.3 + s.eaten * 0.5
+        for (f in s.hooked) v += minOf(Eval.onMap(g, f), 4) * 0.8
         for (reef in snapReefs(g)) {
             val prey = g.players.indices.filter { it != p }.sumOf { g.reefs[reef].warriors(g.players[it].faction) }
             v += minOf(prey, 4) * 1.2
-            lureAt(g, reef)?.let { v += 3.0 }
+            lureAt(g, reef)?.let { v += if (it.variant == DARK) 0.5 else 3.0 }
         }
         return v + Eval.hand(g, p, 1.8)
     }

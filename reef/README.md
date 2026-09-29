@@ -7,6 +7,10 @@ All **14 factions** are playable: Sharks, Sardines, Lionfish, Starfish, Coral, J
 Parrotfish, Sea Turtles, Sea Snake, Remoras, Hermit Crabs, Anglerfish, Octopus and Cuttlefish.
 Play 2 to 4 of them, each by a person or a bot, with pass-and-play on one phone.
 
+Every faction moves, battles, recruits and crafts, each in its own way, and each has a quirk from
+the real animal: sharks that frenzy, lionfish too stuffed to move, immortal jellyfish, parrotfish
+asleep in slime, hatchlings dashing past predators, an octopus that inks and jets away.
+
 ## Install
 
 Every push builds a new APK. On your phone, open the repository's **Releases**, find
@@ -25,17 +29,18 @@ game in progress is kept.
   action it can take. Each card has a picture of what you pay and what you get.
 - Tap an action, then the glowing reefs in order. Arrows on the map show every place the choice can
   go, then exactly what will happen, before you confirm.
-- Tap a portrait in the scoreboard, or **Rules**, for a faction's board: its three rules with
-  pictures, its Dawn, Day and Dusk, and how it scores.
+- Tap a portrait in the scoreboard, or **Rules**, for a faction's board: the choice it faces each
+  turn, how it moves, battles, recruits and crafts, its three rules and its quirk with pictures, its
+  Dawn, Day and Dusk, and how it scores.
 - **Menu** leaves the game. It is saved after every action; **Continue** on the home screen picks it
   up again.
 
 ## For developers
 
 - `engine/`: the rules as a plain Kotlin module with no Android code. Tests cover each faction's
-  signature rules, plus bot games across 2 to 4 faction lineups. The bot games check that every game
-  ends, that nobody is ever left without a choice (softlocks), and that no piece or card appears or
-  vanishes.
+  signature rules and quirks, plus bot games across 2 to 4 faction lineups. The bot games check that
+  every game ends, that nobody is ever left without a choice (softlocks), and that no piece or card
+  appears or vanishes, and they print each faction's VP per round and the actions it chose.
 - `app/`: the Android app (Jetpack Compose). `app/src/main/kotlin/com/reef/app/ui` has no Android
   imports, so it can also be compiled against Compose Desktop.
 - `art/`: every picture in the game, drawn in Python (`creatures.py`, `pieces.py`) with a small

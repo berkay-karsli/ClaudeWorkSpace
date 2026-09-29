@@ -10,17 +10,23 @@ object RemorasRules : FactionRules {
     override val actionsPerDay = 3
     override val setupHint = "place 3 remoras at any gate."
     const val SETUP = 3
+    const val HITCH = 2
+    const val PILE_ON = 2
 
     override fun warriorNoun(n: Int) = if (n == 1) "remora" else "remoras"
     override fun newState(): FactionState = RemorasState()
     private fun st(g: GameState, p: Int) = g.players[p].fs as RemorasState
 
     override fun dawnHint(g: GameState, p: Int) = "1 remora arrives at a gate of your choice."
-    override fun duskHint(g: GameState, p: Int) = "score 1 VP per faction you ride."
+    override fun duskHint(g: GameState, p: Int) = "score 1 VP per faction that 2 or more of your remoras ride."
 
     fun attached(g: GameState, reef: Int, host: FactionId): Int = g.state<RemorasState>(id)?.attached?.get(reef)?.get(host) ?: 0
     fun attachedTotal(s: RemorasState): Int = s.attached.values.sumOf { it.values.sum() }
     fun hosts(s: RemorasState): Set<FactionId> = s.attached.values.flatMap { m -> m.filterValues { it > 0 }.keys }.toSet()
+
+    /** Hosts ridden by 2 or more remoras in all: these score at Dusk. */
+    fun scoringHosts(s: RemorasState): Set<FactionId> =
+        s.attached.values.flatMap { it.entries }.groupBy({ it.key }, { it.value }).filterValues { it.sum() >= 2 }.keys
 
     override fun setupOptions(g: GameState, p: Int): List<Option> =
         if (g.players[p].setupDone) emptyList() else Board.gates.map { PlaceSetup(it) }
@@ -59,7 +65,21 @@ object RemorasRules : FactionRules {
                     for (k in free downTo 1) out += Attach(reef, host, k)
                 }
             }
-            s.attached[reef]?.forEach { (host, n) -> if (n > 0) out += LetGo(reef, host) }
+            s.attached[reef]?.forEach { (host, n) ->
+                if (n > 0) {
+                    out += LetGo(reef, host)
+                    if (g.turn.used("clean") == 0) out += Clean(reef, host)
+                }
+            }
+        }
+        if (s.supply > 0) {
+            for (c in g.players[p].hand.distinct()) for (reef in g.reefs.indices) {
+                if (Cards[c].suit != Suit.MOON && g.suitOf(reef) != Cards[c].suit) continue
+                for (q in g.players.indices) {
+                    val host = g.players[q].faction
+                    if (host != id && g.reefs[reef].warriors(host) > 0) out += Hitch(c, reef, host)
+                }
+            }
         }
         return out
     }
@@ -81,6 +101,20 @@ object RemorasRules : FactionRules {
                 val n = detach(s, o.reef, o.host)
                 g.reefs[o.reef].addWarriors(id, n)
                 Game.log(g, "Remoras: $n ${warriorNoun(n)} let go of the ${o.host.display} in ${Board.name(o.reef)}.")
+            }
+            is Clean -> {
+                g.turn.use("clean")
+                Game.log(g, "Remoras: open a cleaning station for the ${o.host.display} in ${Board.name(o.reef)}. Both draw a card.")
+                Game.draw(g, g.player(o.host), 1)
+                Game.draw(g, p, 1)
+            }
+            is Hitch -> {
+                Game.discardFromHand(g, p, o.cardId)
+                val n = minOf(HITCH, s.supply)
+                s.supply -= n
+                val m = s.attached.getOrPut(o.reef) { mutableMapOf() }
+                m[o.host] = (m[o.host] ?: 0) + n
+                Game.log(g, "Remoras: $n new ${warriorNoun(n)} hitch onto the ${o.host.display} in ${Board.name(o.reef)}.")
             }
             else -> error("Remoras can't ${o.describe()}")
         }
@@ -120,6 +154,12 @@ object RemorasRules : FactionRules {
         for (reef in s.attached.keys.toList()) for (host in s.attached[reef]?.keys?.toList().orEmpty()) dropOff(g, host, reef)
     }
 
+    /** Remoras riding [host] in [reef] add 1 hit each to the host's attacks there, up to 2. */
+    fun pileOn(g: GameState, host: FactionId, reef: Int): Int = minOf(PILE_ON, attached(g, reef, host))
+
+    /** Each reef where 3 or more remoras ride pays its suit. */
+    override fun craftUnits(g: GameState, p: Int) = reefUnits(g, st(g, p).attached.filterValues { m -> m.values.sum() >= 3 }.keys.sorted())
+
     /** 1 VP when a faction the remoras ride removes pieces of a faction other than the remoras, once per attack. */
     fun scraps(g: GameState, by: Int, victim: Int, ctx: AttackCtx) {
         val s = g.state<RemorasState>(id) ?: return
@@ -131,7 +171,7 @@ object RemorasRules : FactionRules {
 
     override fun duskAuto(g: GameState, p: Int) {
         settle(g)
-        val n = hosts(st(g, p)).size
+        val n = scoringHosts(st(g, p)).size
         Game.scoreVp(g, p, n, "riding $n faction${if (n == 1) "" else "s"}")
     }
 
@@ -157,7 +197,7 @@ object RemorasRules : FactionRules {
     override fun value(g: GameState, p: Int, self: Boolean): Double {
         val s = st(g, p)
         var v = Eval.onMap(g, id) * 1.5 + attachedTotal(s) * 3.0
-        v += hosts(s).size * 8.0
+        v += hosts(s).size * 3.0 + scoringHosts(s).size * 7.0
         for ((reef, m) in s.attached) for ((host, n) in m) {
             if (n <= 0) continue
             // Hosts that can fight feed the remoras.

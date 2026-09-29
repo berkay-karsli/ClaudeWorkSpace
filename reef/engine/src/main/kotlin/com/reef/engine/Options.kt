@@ -126,7 +126,27 @@ data class Hunt(val from: Int, val to: Int, val n: Int, val scent: Boolean, val 
         (if (scent) " following Blood" else "") + (prey?.let { ", then battle ${it.display}" } ?: ", no battle")
 }
 
+/** Sharks at Dusk: eat a Blood for points. */
+data class FeedBlood(val reef: Int) : Option() {
+    override val kind = "Eat Blood"
+    override val reefs = listOf(reef)
+    override fun describe() = "Feed on the Blood in ${r(reef)}: ${SharksRules.BLOOD_VP} VP"
+}
+
+/** Sharks at Dusk: a Blood becomes new sharks instead. */
+data class Frenzy(val reef: Int, val n: Int) : Option() {
+    override val kind = "Frenzy"
+    override val reefs = listOf(reef)
+    override fun describe() = "Frenzy in ${r(reef)}: $n shark${if (n == 1) "" else "s"} arrive instead of feeding"
+}
+
 // ---- Coral -------------------------------------------------------------------------------------
+
+data class Bleach(val reef: Int) : Option() {
+    override val kind = "Bleach"
+    override val reefs = listOf(reef)
+    override fun describe() = "Bleach a coral in ${r(reef)}: draw 2 cards"
+}
 
 data class Grow(val reef: Int, val cardId: Int) : Option() {
     override val kind = "Grow"
@@ -158,17 +178,27 @@ data class RunGate(val gate: Int) : Option() {
     override fun describe() = "The run arrives at ${r(gate)}"
 }
 
-data class RunCard(val cardId: Int) : Option() {
-    override val kind = "Add fish"
-    override val card = cardId
-    override fun describe() = "Discard ${c(cardId)}: 1 more sardine"
-}
-
 data class Exit(val gate: Int, val n: Int) : Option() {
     override val kind = "Leave"
     override val reefs = listOf(gate)
     override val count = n
     override fun describe() = "$n sardines leave the map at ${r(gate)}"
+}
+
+data class Rally(val cardId: Int, val reef: Int) : Option() {
+    override val kind = "Rally"
+    override val reefs = listOf(reef)
+    override val card = cardId
+    override val costsAction = true
+    override fun describe() = "Rally 2 sardines to the school in ${r(reef)}, discarding ${c(cardId)}"
+}
+
+/** Right after a big school arrives: shove a weaker faction's warriors out. */
+data class Push(val reef: Int, val victim: FactionId, val to: Int) : Option() {
+    override val kind = "Push"
+    override val reefs = listOf(reef, to)
+    override val target = victim
+    override fun describe() = "Push the ${victim.display} from ${r(reef)} to ${r(to)}"
 }
 
 data class BaitBall(val to: Int) : Option() {
@@ -187,7 +217,32 @@ data class Gorge(val reef: Int, val prey: FactionId) : Option() {
     override fun describe() = "Gorge on ${prey.display} in ${r(reef)}: 1 hit, no dice"
 }
 
+data class Release(val cardId: Int, val gate: Int) : Option() {
+    override val kind = "Release"
+    override val reefs = listOf(gate)
+    override val card = cardId
+    override val costsAction = true
+    override fun describe() = "Release 2 lionfish at ${r(gate)}, discarding ${c(cardId)}"
+}
+
+/** Lionfish at Dusk: the young from [from] settle in [to]. */
+data class Breed(val from: Int, val to: Int) : Option() {
+    override val kind = "Breed"
+    override val reefs = listOf(from, to)
+    override fun describe() = if (from == to) "A young lionfish stays in ${r(from)}" else "A young lionfish from ${r(from)} settles in ${r(to)}"
+}
+
 // ---- Starfish ----------------------------------------------------------------------------------
+
+/** Devour an enemy building ([owner] and [type]) or, with no owner, lay Rubble. */
+data class Devour(val reef: Int, val owner: FactionId? = null, val type: PieceType? = null) : Option() {
+    override val kind = "Devour"
+    override val reefs = listOf(reef)
+    override val target = owner
+    override val variant = type?.label ?: "Rubble"
+    override val costsAction = true
+    override fun describe() = if (owner == null) "Strip ${r(reef)} to Rubble" else "Devour ${Game.possessive(owner.display)} ${type!!.label} in ${r(reef)}"
+}
 
 data class StarSpawn(val cardId: Int, val reef: Int) : Option() {
     override val kind = "Spawn"
@@ -223,6 +278,12 @@ data class Drift(val from: Int, val to: Int) : Option() {
 
 // ---- Parrotfish --------------------------------------------------------------------------------
 
+data class Cocoon(val reef: Int) : Option() {
+    override val kind = "Cocoon"
+    override val reefs = listOf(reef)
+    override fun describe() = "Wrap the parrotfish in ${r(reef)} in a cocoon"
+}
+
 data class GrazeEat(val reef: Int, val owner: FactionId, val type: PieceType) : Option() {
     override val kind = "Graze"
     override val reefs = listOf(reef)
@@ -251,17 +312,17 @@ data class RaiseIsland(val reef: Int) : Option() {
     override val kind = "Island"
     override val reefs = listOf(reef)
     override val costsAction = true
-    override fun describe() = "Raise ${r(reef)} into an island (5 Sand)"
+    override fun describe() = "Raise ${r(reef)} into an island (${ParrotfishRules.ISLAND_COST} Sand)"
 }
 
 // ---- Sea Turtles -------------------------------------------------------------------------------
 
-data class TurtleMove(val id: Int, val from: Int, val to: Int, val carrying: String) : Option() {
+data class TurtleMove(val id: Int, val from: Int, val to: Int, val carrying: String, val ride: Boolean = false) : Option() {
     override val kind = "Swim"
     override val reefs = listOf(from, to)
     override val variant = "Turtle ${id + 1} ($carrying)"
     override val costsAction = true
-    override fun describe() = "Turtle ${id + 1} swims from ${r(from)} to ${r(to)}"
+    override fun describe() = "Turtle ${id + 1} " + (if (ride) "rides the current" else "swims") + " from ${r(from)} to ${r(to)}"
 }
 
 data class Feed(val id: Int, val reef: Int, val suit: Suit) : Option() {
@@ -305,7 +366,31 @@ data class Bite(val reef: Int, val prey: FactionId) : Option() {
     override fun describe() = "Bite ${prey.display} in ${r(reef)}"
 }
 
+data class Molt(val cardId: Int) : Option() {
+    override val kind = "Molt"
+    override val card = cardId
+    override val costsAction = true
+    override fun describe() = "Molt: add 2 segments, discarding ${c(cardId)}"
+}
+
 // ---- Remoras -----------------------------------------------------------------------------------
+
+data class Clean(val reef: Int, val host: FactionId) : Option() {
+    override val kind = "Clean"
+    override val reefs = listOf(reef)
+    override val target = host
+    override val costsAction = true
+    override fun describe() = "Clean the ${host.display} in ${r(reef)}: you both draw a card"
+}
+
+data class Hitch(val cardId: Int, val reef: Int, val host: FactionId) : Option() {
+    override val kind = "Hitch"
+    override val reefs = listOf(reef)
+    override val card = cardId
+    override val target = host
+    override val costsAction = true
+    override fun describe() = "Hitch 2 new remoras onto the ${host.display} in ${r(reef)}, discarding ${c(cardId)}"
+}
 
 data class Swim(val from: Int, val to: Int, val n: Int) : Option() {
     override val kind = "Swim"
@@ -344,7 +429,7 @@ data class Recruit(val reef: Int) : Option() {
     override val kind = "Recruit"
     override val reefs = listOf(reef)
     override val costsAction = true
-    override fun describe() = "2 crabs join at ${r(reef)}"
+    override fun describe() = "${CrabsRules.RECRUIT} crabs join at ${r(reef)}"
 }
 
 data class BuildMarket(val reef: Int, val cardId: Int) : Option() {
@@ -450,6 +535,21 @@ data class Recoil(val arm: Int, val lost: Int) : Option() {
     override fun describe() = "Arm ${arm + 1} can't carry out its order: recoil, losing $lost order${if (lost == 1) "" else "s"} and $lost VP"
 }
 
+/** At Dawn, the orders on two arms trade places. */
+data class Rewire(val a: Int, val b: Int) : Option() {
+    override val kind = "Swap"
+    override val variant = "Arms ${a + 1} and ${b + 1}"
+    override fun describe() = "Swap the orders of arms ${a + 1} and ${b + 1}"
+}
+
+/** When battled: ink, and the octopus's pieces there jet to [to]. */
+data class InkCloud(val cardId: Int, val to: Int) : Option() {
+    override val kind = "Ink"
+    override val reefs = listOf(to)
+    override val card = cardId
+    override fun describe() = "Ink, discarding ${c(cardId)}: the battle ends and your pieces jet to ${r(to)}"
+}
+
 data class MantleMove(val reef: Int) : Option() {
     override val kind = "Mantle"
     override val reefs = listOf(reef)
@@ -465,6 +565,24 @@ data class Paint(val reef: Int, val cardId: Int, val suit: Suit) : Option() {
     override val variant = suit.label
     override val costsAction = true
     override fun describe() = "Paint ${r(reef)} ${suit.label}, discarding ${c(cardId)}"
+}
+
+data class Hatch(val cardId: Int, val reef: Int) : Option() {
+    override val kind = "Hatch"
+    override val reefs = listOf(reef)
+    override val card = cardId
+    override val costsAction = true
+    override fun describe() = "Hatch 2 cuttlefish in ${r(reef)}, discarding ${c(cardId)}"
+}
+
+data class Hypnotize(val cardId: Int, val from: Int, val victim: FactionId, val to: Int, val n: Int) : Option() {
+    override val kind = "Hypnotize"
+    override val reefs = listOf(from, to)
+    override val card = cardId
+    override val target = victim
+    override val count = n
+    override val costsAction = true
+    override fun describe() = "Hypnotize $n of the ${victim.display} from ${r(from)} to ${r(to)}, discarding ${c(cardId)}"
 }
 
 /** What the game is waiting for: which player decides, and their options. */

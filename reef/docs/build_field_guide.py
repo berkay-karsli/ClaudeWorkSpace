@@ -11,7 +11,7 @@ import re
 import sys
 from pathlib import Path
 
-VERBS = ["Move", "Battle", "Build", "Recruit", "Craft"]
+VERBS = ["Move", "Battle", "Recruit", "Craft"]
 RULE_THRESHOLDS = {2: 12, 3: 15, 4: 18}  # minimum total reach per faction count
 
 FACTIONS = [
@@ -20,38 +20,44 @@ FACTIONS = [
         latin="Carcharhinus amblyrhynchos", common="grey reef sharks",
         complexity=1, reach=9,
         tagline="Stop swimming and you drown.",
-        idea="Sharks own nothing and build nothing. They roam, they fight, and they score from the blood that every fight leaves behind.",
+        idea="Sharks own nothing and build nothing. They roam, they fight, and every fight leaves Blood in the water. Each Blood is a meal, a frenzy that brings more sharks, or something shiny to craft with.",
         core="Must keep moving; feeds on the aftermath of every fight",
         scores_by="eating Blood",
-        verbs=dict(Move=True, Battle=True, Build=False, Recruit=True, Craft=False),
+        choice="Every Blood is 2 VP, 2 more sharks, or gear. Never more than one of them.",
+        ways=dict(Move="Hunt: move, then maybe battle", Battle="Hunt, two hits per shark", Recruit="1 a Dawn, 2 per frenzy", Craft="Blood, eaten when used"),
         rules=[
             ("Keep swimming", "At Dusk, every shark that didn't move this turn drowns."),
             ("Big", "Each shark counts as two warriors whenever warriors are counted, including for rule and for the hits you can deal."),
             ("Blood in the water", "While sharks are in the game, any attack that removes a warrior leaves a Blood token in that reef, one per reef. Blood belongs to no one. Your sharks can move to a Blood reef up to two channels away, ignoring rule."),
         ],
-        pieces="10 sharks. 8 Blood tokens.",
+        quirk=("Open ocean", "Sharks at a gate can swim to any other gate as one move. They dive out of the reef and turn up on the far side."),
+        craft="Blood in a reef with your sharks pays that reef's suit. Crafting eats it, for no VP.",
+        pieces="12 sharks. 8 Blood tokens.",
         setup="3 sharks at any gate.",
-        turn=[("Dawn", "Sharks arrive at one gate: 1, plus 1 for each Blood token on the map, up to 3."), ("Day", "3 actions: hunt. A hunt moves sharks from one reef, then they may battle where they arrive."), ("Dusk", "Feed, then any shark that stayed still drowns.")],
-        scores=["At Dusk, remove every Blood token in a reef with your sharks: 2 VP each."],
+        turn=[("Dawn", "1 shark arrives at any gate, or 2 if you have none on the map."), ("Day", "3 actions: hunt. A hunt moves sharks from one reef, then they may battle where they arrive."), ("Dusk", "Each Blood in a reef with your sharks: feed on it, or frenzy (remove it and 2 sharks arrive there, as if they had moved). Then any shark that stayed still drowns.")],
+        scores=["Feeding on a Blood at Dusk: 2 VP."],
         note="Many sharks breathe by swimming, pushing water over their gills. For them, stopping means suffocating.",
     ),
     dict(
         key="sardines", name="Sardines", role="Racer", glyph="shoal", color="sardine",
         latin="Sardinops sagax", common="sardines on their run",
-        complexity=1, reach=2,
+        complexity=1, reach=4,
         tagline="Ten thousand fish, one direction.",
-        idea="A race across the map. Schools come in through one gate and score by leaving through another. Sardines never start a fight and never stay long.",
+        idea="A race across the map. Schools come in through one gate and score by leaving through another. The bigger the school, the more it scores, but the longer it stays, the more gets eaten. A big enough school shoves everyone out of its way.",
         core="Race schools across the map and out the far side",
         scores_by="leaving through a gate",
-        verbs=dict(Move=True, Battle=False, Build=False, Recruit=True, Craft=False),
+        choice="Cash a school in now, or grow it for a bigger payout while everything hunts it.",
+        ways=dict(Move="The whole school, two channels", Battle="Mob with a school of 6+", Recruit="The run, and rallies", Craft="Schools of 4 or more"),
         rules=[
-            ("The run", "At Dawn, 3 sardines arrive at any gate, plus 1 for each card of that gate's suit you discard. The game remembers the gate every fish came in by."),
-            ("One school", "A move takes all your sardines in a reef together, up to two channels, ignoring rule."),
+            ("The run", "At Dawn, 3 sardines arrive at any gate. The game remembers the gate every fish came in by. Fish that rally count as coming in by the gate most of their school came in by."),
+            ("One school", "A move takes all your sardines in a reef together, up to two channels, ignoring rule. A school of 6 or more can mob: battle, dealing at most 1 hit for every 3 fish."),
             ("Bait ball", "When battled, before any hits, you may give up the fight: lose half the school, rounded down, and move the rest to a neighboring reef. The lost fish count as removed by the attack."),
         ],
+        quirk=("Wall of fish", "Right after a school of 6 or more arrives, you may push one faction that has fewer warriors there: all its warriors there move to a neighboring reef of your choice."),
+        craft="Each reef with 4 or more of your sardines pays its suit.",
         pieces="30 sardines.",
         setup="5 sardines at any gate.",
-        turn=[("Dawn", "The run arrives."), ("Day", "3 actions: move."), ("Dusk", "Schools on a gate may leave the map.")],
+        turn=[("Dawn", "The run arrives."), ("Day", "3 actions: move, mob, or rally (discard a card: 2 sardines join a school in a reef of the card's suit)."), ("Dusk", "Schools on a gate may leave the map.")],
         scores=["At Dusk, sardines on a gate they didn't come in by may leave: 1–3 fish score 1 VP, 4–6 score 2, 7–9 score 4, 10 or more score 6. They go back to your supply."],
         note="Every winter billions of sardines run up the east coast of South Africa, and the predators follow them.",
     ),
@@ -60,195 +66,225 @@ FACTIONS = [
         latin="Pterois volitans", common="red lionfish",
         complexity=1, reach=8,
         tagline="Nothing here eats us.",
-        idea="An invasive species with no natural enemies on this reef. Two fish slip in at the start. They breed every turn and eat whatever they outnumber.",
+        idea="An invasive species with no natural enemies on this reef. Lionfish breed every turn and eat whatever they outnumber, then sit there, too stuffed to move.",
         core="Outbreed everyone and eat what you outnumber",
-        scores_by="gorging",
-        verbs=dict(Move=True, Battle=False, Build=False, Recruit=True, Craft=False),
+        scores_by="gorging and reefs held alone",
+        choice="Spread out to breed everywhere, or pile up to hold reefs alone. Gorge now and sit stuffed, or keep moving.",
+        ways=dict(Move="Standard moves", Battle="Gorge with no dice, or battle", Recruit="Breed, or release", Craft="Reefs you hold alone"),
         rules=[
-            ("Breed", "At Dusk, add 1 lionfish to each reef where you have 2 or more. At Dawn, if you have fewer than 2 lionfish on the map, 2 more arrive at any gate."),
+            ("Breed", "At Dusk, each reef with 3 or more of your lionfish breeds 1 lionfish, placed there or in a neighboring reef. At Dawn, if you have fewer than 2 lionfish on the map, 2 more arrive at any gate."),
             ("Gorge", "Attack a faction whose warriors you outnumber in a reef: it takes 1 hit. No dice, and no hits back."),
             ("Venom", "A faction that battles your lionfish takes 1 hit before the dice are rolled."),
         ],
+        quirk=("Stuffed", "After gorging, your lionfish in that reef can't move or gorge again for the rest of the turn. A lionfish's stomach can stretch to thirty times its size."),
+        craft="Each reef where 3 or more of your lionfish are the only warriors pays its suit.",
         pieces="24 lionfish.",
         setup="2 lionfish at any gate.",
-        turn=[("Dawn", "If you have fewer than 2 lionfish on the map, 2 arrive at a gate."), ("Day", "3 actions: move or gorge."), ("Dusk", "Breed, then score.")],
-        scores=["1 VP for each warrior your gorging removes.", "At Dusk, after breeding, 1 VP per reef where you have 4 or more lionfish and no other faction has warriors."],
+        turn=[("Dawn", "If you have fewer than 2 lionfish on the map, 2 arrive at a gate."), ("Day", "3 actions: move, battle, gorge, or release once (discard a card: 2 lionfish arrive at any gate)."), ("Dusk", "Breed, then score.")],
+        scores=["1 VP for each warrior your gorging removes.", "At Dusk, after breeding, 1 VP per reef where you have 6 or more lionfish and no other faction has warriors."],
         note="Lionfish reached the Atlantic in the 1980s and spread along the whole American coast. Local fish don't recognize them as predators.",
     ),
     dict(
         key="starfish", name="Starfish", role="Outbreak", glyph="star", color="star",
         latin="Acanthaster planci", common="crown-of-thorns starfish",
-        complexity=1, reach=5,
+        complexity=1, reach=6,
         tagline="Cut one, two grow back.",
-        idea="A plague that eats reefs down to rubble. Starfish never start a fight. They crawl in, strip the reef bare, and hitting them only makes more.",
-        core="Strip reefs to rubble; hitting them spreads them",
-        scores_by="reefs with Rubble",
-        verbs=dict(Move=True, Battle=False, Build=False, Recruit=True, Craft=False),
+        idea="A plague that eats reefs down to rubble. Starfish crawl toward anything built, eat it, and leave Rubble behind. Hitting them only makes more.",
+        core="Eat what's built and leave Rubble; hitting them spreads them",
+        scores_by="devouring and Rubble",
+        choice="Eat a building for a point now, or lay Rubble that pays every Dusk. Two actions: eat here, or crawl to the next meal.",
+        ways=dict(Move="Crawl, drawn to buildings", Battle="Devour, or battle", Recruit="Spawn, and regrow when hit", Craft="Your Rubble"),
         rules=[
-            ("Strip", "At Dusk, in each reef with 3 or more of your starfish, an empty slot and none of your Rubble, put Rubble in that slot. Rubble is a token that blocks the slot for everyone."),
-            ("Regrow", "After any attack that removes your starfish, 2 starfish regrow in the neighboring reef where you have the most starfish."),
+            ("Devour", "An action in a reef with 3 or more of your starfish: remove an enemy building there, or put Rubble in an empty slot if none of your Rubble is there yet. Rubble is a token that fills its slot for everyone."),
+            ("Drawn to food", "Your starfish can move into a reef with an enemy building, ignoring rule."),
             ("Spawn", "At Dawn, discard up to 2 cards. Each adds 2 starfish to a reef of its suit where you have starfish, or to any reef of its suit if you have none on the map."),
         ],
+        quirk=("Cut in half", "After any attack removes your starfish, 2 starfish regrow in the neighboring reef where you have the most. Divers once chopped them up to kill them."),
+        craft="Your Rubble pays its reef's suit.",
         pieces="20 starfish. 6 Rubble tokens.",
         setup="3 starfish in each of two neighboring reefs that aren't gates.",
-        turn=[("Dawn", "Spawn."), ("Day", "2 actions: move."), ("Dusk", "Strip, then score.")],
-        scores=["At Dusk, 1 VP for every 2 reefs that have your Rubble, rounded up."],
+        turn=[("Dawn", "Spawn."), ("Day", "2 actions: move, battle or devour."), ("Dusk", "Score.")],
+        scores=["1 VP per building devoured, like any building removed.", "At Dusk, 1 VP for every 2 reefs that have your Rubble, rounded up."],
         note="A crown-of-thorns outbreak can kill most of the coral on a reef, and a starfish can regrow lost arms.",
     ),
     dict(
         key="coral", name="Coral", role="Builder", glyph="coral", color="coral",
         latin="Acropora cervicornis", common="staghorn coral",
-        complexity=2, reach=4,
+        complexity=2, reach=5,
         tagline="We never move. We grow.",
-        idea="A living reef. It can't take a step or start a fight. It spreads by spawning into neighboring reefs and scores by growing.",
-        core="Grow in place; spread only by spawning",
-        scores_by="growing coral",
-        verbs=dict(Move=False, Battle=False, Build=True, Recruit=True, Craft=True),
+        idea="A living reef. It can't take a step, but it spreads by spawning, stings whatever comes too close, and fish shelter in it. Grow tall for points, or leave room for visitors who pay you every Dusk.",
+        core="Grow in place; spread only by spawning; shelter visitors",
+        scores_by="growing coral and sheltering visitors",
+        choice="Grow this turn, or bleach a coral for cards and grow bigger later. Crowd visitors out, or let them in for Nursery points, knowing they might wreck you.",
+        ways=dict(Move="Spawn into neighbors; never moves", Battle="Polyps sting in a battle", Recruit="Spawn", Craft="Reefs with your coral"),
         rules=[
-            ("Rooted", "Polyps never move, not even along currents."),
+            ("Rooted", "Polyps never move, not even along currents or when pushed."),
             ("Spawn", "Once per turn, discard a card: each reef of its suit with your coral puts 1 polyp into every neighboring reef. With a Moon card, every reef with your coral spawns. If you have no coral on the map, the spawn instead puts 2 polyps into one reef of the card's suit."),
             ("Living reef", "When you are battled, each of your coral in that reef counts as a warrior for the hits you can deal."),
         ],
+        quirk=("Bleach", "In a turn when you don't grow, you may take one of your coral out of the game to draw 2 cards. Stressed coral spits out its algae, turns white and dies."),
+        craft="Each reef with your coral pays its suit, however many coral it has.",
         pieces="20 polyps. 15 coral (buildings).",
         setup="2 coral and 3 polyps in one reef that isn't a gate, and 1 polyp in each neighboring reef.",
-        turn=[("Dawn", "Nothing."), ("Day", "3 actions: grow (discard a card of the reef's suit to build a coral in an empty slot of a reef you rule) or spawn."), ("Dusk", "Draw 1 extra card per 5 coral on the map.")],
-        scores=["Each coral scores when grown: 1, 1, 1, 2, 2, 2, 3 and so on.", "Gear crafted by your coral."],
+        turn=[("Dawn", "Nothing."), ("Day", "3 actions: grow (discard a card of the reef's suit to build a coral in an empty slot of a reef you rule), spawn, or battle."), ("Dusk", "Score the Nursery. Draw 1 extra card per 5 coral on the map.")],
+        scores=["Each coral scores when grown: 1 VP for every 4 coral on the map, at least 1.", "Nursery: at Dusk, 1 VP per reef with your coral where another faction has warriors."],
         note="Many corals spawn on the same one or two nights a year, timed by the moon. That is why a Moon card makes every reef spawn.",
     ),
     dict(
         key="jellyfish", name="Jellyfish", role="Drifter", glyph="jelly", color="jelly",
-        latin="Aurelia aurita", common="moon jellyfish",
-        complexity=2, reach=5,
+        latin="Turritopsis dohrnii", common="immortal jellyfish",
+        complexity=2, reach=6,
         tagline="We can't steer. We bend the current.",
-        idea="You never move a jellyfish. They drift every turn, and all you control is the current that carries them. Whatever swims into them gets stung.",
+        idea="You never steer a jellyfish. They drift every turn, and all you control is the current that carries them. Whatever swims into them gets stung, and even a dead jellyfish comes back.",
         core="Drift with the currents you set; sting whatever swims in",
         scores_by="stings and big swarms",
-        verbs=dict(Move=False, Battle=False, Build=False, Recruit=True, Craft=False),
+        choice="Aim the currents at enemies to sting them, or hold your swarms still to score.",
+        ways=dict(Move="Drift on currents you set", Battle="Pulse once a turn from a swarm", Recruit="Bloom, and cysts", Craft="Swarms of 3 or more"),
         rules=[
             ("Drift", "At Dusk, your jellyfish in each reef follow one current leading out of it, one channel. No current, no drift. Drifting ignores rule."),
             ("Your currents", "You own 4 current arrows. Each turns an empty channel into a one-way current, and currents work for every faction."),
             ("Sting", "When another faction moves warriors into a reef with 2 or more of your jellyfish, by any kind of movement, it takes 1 hit, which removes one of the arrivals."),
         ],
-        pieces="24 jellyfish. 4 current arrows (channel markers).",
+        quirk=("Immortal", "When an attack removes the last of your jellyfish in a reef, leave a cyst token there. At your Dawn, each cyst becomes 2 jellyfish."),
+        craft="Each reef with 3 or more of your jellyfish pays its suit.",
+        pieces="24 jellyfish. 4 current arrows (channel markers). 4 cysts (tokens).",
         setup="3 jellyfish in each of two reefs on the Gyre.",
-        turn=[("Dawn", "Nothing."), ("Day", "Place or turn up to 2 arrows. Then bloom: discard up to 2 cards, and each adds 1 jellyfish to every reef of its suit where you have jellyfish (Moon: every such reef). With no jellyfish on the map, a bloom puts 3 jellyfish into one reef of its suit instead."), ("Dusk", "Drift, then score.")],
+        turn=[("Dawn", "Cysts become jellyfish."), ("Day", "Place or turn up to 2 arrows. Bloom up to twice: discard a card, and 1 jellyfish joins every reef of its suit where you have jellyfish (Moon: every such reef); with none on the map, 3 bloom in one reef of its suit. Pulse once: battle in a reef with 3 or more of your jellyfish."), ("Dusk", "Drift, then score.")],
         scores=["1 VP each time a sting removes a warrior.", "At Dusk, after drifting, 1 VP per reef with 3 or more of your jellyfish, 2 VP if it has 6 or more."],
-        note="Moon jellyfish blooms can hold millions of animals, enough to clog fishing nets and the cooling intakes of power stations.",
+        note="The immortal jellyfish can turn back into a young polyp when it is hurt, and grow up all over again.",
     ),
     dict(
         key="parrotfish", name="Parrotfish", role="Terraformer", glyph="parrot", color="parrot",
         latin="Bolbometopon muricatum", common="bumphead parrotfish",
         complexity=2, reach=7,
         tagline="Every beach was a reef once.",
-        idea="Parrotfish chew the reef into sand, then use the sand to reshape the map. Sandbars cut channels, and islands rise out of the sea.",
+        idea="Parrotfish chew the reef into sand and use the sand to reshape the map. Sandbars cut channels and islands rise out of the sea. At night they sleep in a bubble of their own slime.",
         core="Graze the reef into sand; reshape the map with it",
         scores_by="sandbars and islands",
-        verbs=dict(Move=True, Battle=True, Build=False, Recruit=True, Craft=False),
+        choice="Sand builds sandbars and islands, or buys gear. A cocoon keeps a reef safe but pins it for a turn.",
+        ways=dict(Move="Standard moves", Battle="Standard battles", Recruit="2 a Dawn where you rule", Craft="Islands, or 3 Sand"),
         rules=[
             ("Graze", "In a reef you rule, remove one enemy building or token and gain 3 Sand. If there is nothing to eat, chew the bare reef for 2 Sand, once per reef each turn."),
             ("Sandbar", "Spend 2 Sand to put a sandbar on a channel next to a reef you rule. For everyone but you, the two reefs stop being neighbors. A faction with warriors at both ends can spend a move to dig it out."),
-            ("Island", "Spend 5 Sand to raise an island in a reef you rule that touches 2 of your sandbars. You rule it for the rest of the game, your parrotfish there can't be attacked, and the island can't be removed."),
+            ("Island", "Spend 4 Sand to raise an island in a reef you rule that touches 2 of your sandbars. You rule it for the rest of the game, your parrotfish there can't be attacked, and the island can't be removed."),
         ],
-        pieces="16 parrotfish. 8 sandbars (channel markers). 3 islands.",
+        quirk=("Pajamas", "At Dusk, you may wrap your parrotfish in one reef you rule in a slime cocoon. Until your next Dusk they can't be attacked or pushed, and they can't move."),
+        craft="Your islands pay their suit, and 3 Sand pays any suit.",
+        pieces="16 parrotfish. 8 sandbars (channel markers). 3 islands. 1 cocoon (token).",
         setup="4 parrotfish at any gate.",
-        turn=[("Dawn", "2 parrotfish arrive in a reef you rule, or at a gate if you rule none."), ("Day", "3 actions: move, battle, graze, place a sandbar or raise an island."), ("Dusk", "Score islands.")],
-        scores=["1 VP per sandbar placed, 2 VP per island raised.", "At Dusk, 1 VP per island."],
-        note="Much of the white sand on tropical beaches has passed through a parrotfish. Bumpheads settle their fights by ramming heads.",
+        turn=[("Dawn", "2 parrotfish arrive in a reef you rule, or at a gate if you rule none."), ("Day", "3 actions: move, battle, graze, place a sandbar or raise an island."), ("Dusk", "Score islands. Your old cocoon opens, and you may spin a new one.")],
+        scores=["1 VP per sandbar placed, 3 VP per island raised.", "At Dusk, 1 VP per island."],
+        note="Much of the white sand on tropical beaches has passed through a parrotfish. Many sleep in a mucus cocoon that hides their smell.",
     ),
     dict(
         key="turtles", name="Sea Turtles", role="Wanderer", glyph="turtle", color="turtle",
         latin="Chelonia mydas", common="green sea turtles",
-        complexity=2, reach=2,
+        complexity=2, reach=3,
         tagline="Go far. Come home.",
-        idea="Four old turtles swim far out to feed, then come home to lay eggs on the shore. The eggs stay behind, and everyone can see the nest.",
+        idea="Four old turtles swim far out to feed, riding the currents, then come home to lay eggs on the shore. Every hatchling has to dash past whatever is waiting on the beach.",
         core="Journey out to feed, come home to nest",
-        scores_by="hatching eggs",
-        verbs=dict(Move=True, Battle=False, Build=True, Recruit=True, Craft=True),
+        scores_by="eggs and nests",
+        choice="Food makes eggs or pays for gear. Lay at the safe nest far away, or the close one with enemies on the beach.",
+        ways=dict(Move="One turtle at a time, or ride a current", Battle="Standard battles, shell first", Recruit="Hatchlings become turtles", Craft="Nests, or Food"),
         rules=[
             ("Shell", "Ignore the first hit of every attack on your turtles."),
-            ("Wander", "Turtles move one at a time, one channel per move, ignoring rule."),
-            ("Feed and lay", "A turtle away from the shore can feed: it takes a Food of the reef's suit, at most one of each suit. A turtle at your nest lays 1 egg per Food it carries, plus 1, using the Food up."),
+            ("Wander", "Turtles move one at a time, one channel per move, ignoring rule. A turtle can also ride a current as far as it flows, as one move."),
+            ("Feed and lay", "A turtle away from the shore can feed: it takes a Food of the reef's suit, at most one of each suit. A turtle at your nest lays 1 egg per Food it carries, plus 2, using the Food up."),
         ],
+        quirk=("Hatchling dash", "An egg that hatches in a reef with enemy warriors is eaten on its way to the sea: it scores you nothing, and the faction that rules that reef scores 1 VP."),
+        craft="Your nests pay their reef's suit. Each Food a turtle carries pays its suit and is used up.",
         pieces="4 turtles. 3 nests (buildings). 10 eggs (tokens).",
         setup="1 nest and all 4 turtles in one shore reef.",
-        turn=[("Dawn", "Every egg hatches and scores 1 VP. While you have fewer than 4 turtles, a hatchling also becomes a new turtle on its nest. With no turtles at all, one returns to any shore reef."), ("Day", "3 actions: move, feed, lay, or build a nest in an empty slot of a shore reef where you have a turtle."), ("Dusk", "Nothing.")],
-        scores=["1 VP per egg laid, and 1 VP more when it hatches. Nests score when built: 1, 2, 3.", "Gear crafted at your nests."],
-        note="Female sea turtles swim hundreds of kilometers to lay their eggs on the beach where they hatched.",
+        turn=[("Dawn", "Every egg hatches and scores 1 VP. While you have fewer than 4 turtles, a hatchling also becomes a new turtle on its nest. With no turtles at all, one returns to any shore reef."), ("Day", "3 actions: move, battle, feed, lay, or build a nest in an empty slot of a shore reef where you have a turtle."), ("Dusk", "Nothing.")],
+        scores=["1 VP per egg laid, and 1 VP more when it hatches.", "Nests score when built: 1, 2, 3."],
+        note="Female sea turtles swim hundreds of kilometers to lay their eggs on the beach where they hatched. Crabs and birds wait for the hatchlings.",
     ),
     dict(
         key="snake", name="Sea Snake", role="Serpent", glyph="snake", color="snake",
         latin="Laticauda colubrina", common="banded sea krait",
-        complexity=2, reach=6,
+        complexity=2, reach=7,
         tagline="The more it eats, the longer it gets.",
-        idea="One snake with one long body stretched across the map. It grows only by eating, and a single hit in the middle can cut it in two.",
+        idea="One snake with one long body stretched across the map. It grows by eating and by shedding its skin, and it coils around whatever it catches. A single hit in the middle can cut it in two.",
         core="One long body; grow by eating, don't get cut",
         scores_by="stretching across the map",
-        verbs=dict(Move=True, Battle=True, Build=False, Recruit=True, Craft=False),
+        choice="Stretch out for points, or coil back on yourself to squeeze. Shed your tail for gear, or keep the length for actions.",
+        ways=dict(Move="Slither the Head", Battle="Bite at the Head, or coil", Recruit="Grow by eating, or molt", Craft="Shed tail segments"),
         rules=[
-            ("One body", "Your Head and segments form a line, each piece in the same reef as the piece ahead of it or next to it. To slither, move the Head one channel, ignoring rule; each segment moves to where the piece ahead of it was."),
-            ("Grow", "For each enemy warrior your bite removes, add a segment at your tail. At Dawn, a snake with fewer than 4 pieces adds a segment."),
+            ("One body", "Your Head and segments form a line, each piece in the same reef as the piece ahead of it or next to it. To slither, move the Head one channel, ignoring rule; each segment moves to where the piece ahead of it was. Your pieces can't be pushed."),
+            ("Grow", "For each enemy warrior your bites and coils remove, add a segment at your tail. At Dawn, a snake with fewer than 4 pieces adds a segment."),
             ("Cut", "A hit on your snake always removes the piece nearest the tail among those it can hit. If that splits the body, the part behind the cut is lost. If the Head goes, the next segment becomes the Head; if nothing is left, a new Head arrives at any gate at your next Dawn."),
         ],
+        quirk=("Coil", "When your Head slithers into a reef where the rest of your body already is, every other faction's warriors there take 1 hit."),
+        craft="Shed your tail: each segment you take off the end of your snake pays any suit. You can't shed the Head.",
         pieces="1 Head and 14 segments, all warriors.",
         setup="The Head and 3 segments in one reef that isn't a gate.",
-        turn=[("Dawn", "Nothing."), ("Day", "2 actions, or 3 once you have 8 segments: slither, or bite (battle in the Head's reef)."), ("Dusk", "Score.")],
+        turn=[("Dawn", "Nothing."), ("Day", "2 actions, or 3 once you have 9 pieces: slither, bite (battle in the Head's reef), or molt (discard a card: add 2 segments)."), ("Dusk", "Score.")],
         scores=["At Dusk, 1 VP for every 2 reefs your snake is in, rounded up."],
-        note="Banded sea kraits hunt eels in reef crevices, then come ashore to digest and lay eggs.",
+        note="Banded sea kraits hunt eels in reef crevices, then come ashore to digest, shed their skin and lay eggs.",
     ),
     dict(
         key="remoras", name="Remoras", role="Hitchhiker", glyph="remora", color="remora",
         latin="Echeneis naucrates", common="live sharksucker",
-        complexity=2, reach=1,
+        complexity=2, reach=3,
         tagline="Why swim when you can ride?",
-        idea="Remoras don't fight, build or hold ground. They stick to other factions' warriors, go where they go, and eat the scraps of every kill.",
-        core="Ride other factions and share their kills",
+        idea="Remoras don't hold ground. They stick to other factions, go where they go, clean them for a fee and pile into their fights.",
+        core="Ride other factions, clean them, share their kills",
         scores_by="riding and scraps",
-        verbs=dict(Move=True, Battle=False, Build=False, Recruit=True, Craft=False),
+        choice="Ride the fiercest fighter for scraps, or as many factions as you can for Dusk points. Cleaning feeds you both: is that host worth feeding?",
+        ways=dict(Move="Swim free, or ride along", Battle="Pile into your host's battles", Recruit="1 a Dawn, and hitch", Craft="Reefs where you ride"),
         rules=[
             ("Attach", "Stick free remoras onto another faction's warriors in the same reef. Attached remoras can't be hit. When the last of those warriors leaves the reef, the remoras go with it; if those warriors are all removed, the remoras drop off."),
-            ("Tiny", "Remoras never count for rule. Free remoras move ignoring rule."),
-            ("Company", "Remoras only play in games with at least two other factions."),
+            ("Tiny", "Remoras never count for rule, and free remoras move ignoring rule. They only play in games with at least two other factions."),
+            ("Pile on", "When a faction you ride starts a battle, your remoras on it in that reef add 1 hit each, up to 2."),
         ],
-        pieces="10 remoras.",
+        quirk=("Cleaning station", "Once per turn, an action in a reef where your remoras ride a faction: that faction draws a card, and so do you."),
+        craft="Each reef where 3 or more of your remoras ride pays its suit.",
+        pieces="8 remoras.",
         setup="3 remoras at any gate.",
-        turn=[("Dawn", "1 remora arrives at any gate."), ("Day", "3 actions: swim (move free remoras one channel), attach, or let go."), ("Dusk", "Score your rides.")],
-        scores=["1 VP each time a faction you ride removes pieces of a faction other than yours, once per attack.", "At Dusk, 1 VP per faction you ride."],
-        note="A remora's front fin has become a suction disc. It rides sharks, turtles and whales, and eats their leftovers.",
+        turn=[("Dawn", "1 remora arrives at any gate."), ("Day", "3 actions: swim (move free remoras one channel), attach, let go, clean, or hitch (discard a card: 2 new remoras attach to a faction's warriors in a reef of the card's suit)."), ("Dusk", "Score your rides.")],
+        scores=["1 VP each time a faction you ride removes pieces of a faction other than yours, once per attack.", "At Dusk, 1 VP per faction that 2 or more of your remoras ride."],
+        note="A remora's front fin has become a suction disc. It rides sharks, turtles and whales, eats their leftovers and picks off their parasites.",
     ),
     dict(
         key="crabs", name="Hermit Crabs", role="Merchant", glyph="hermit", color="hermit",
         latin="Dardanus", common="hermit crabs",
-        complexity=3, reach=4,
+        complexity=3, reach=5,
         tagline="Every shell has a price.",
-        idea="The reef's only shell shop. Other factions buy shells to protect their warriors, and every card they pay becomes an action for the crabs.",
+        idea="The reef's only shell shop. Other factions buy shells to protect their warriors, and every card they pay becomes an action for the crabs. And whenever someone's home is wrecked, a crab moves in.",
         core="Sell armor; spend the payments as actions",
-        scores_by="markets fed by shell sales",
-        verbs=dict(Move=True, Battle=False, Build=True, Recruit=True, Craft=True),
+        scores_by="markets",
+        choice="Price shells high to bank fewer, richer sales, or low to sell more. Every Till card is an action or a market.",
+        ways=dict(Move="Standard moves, one Till card", Battle="Standard battles, one Till card", Recruit="3 crabs at a market", Craft="Your markets"),
         rules=[
             ("Shell shop", "At the start of another faction's Day, it may buy shells from your pool at your price, paying in cards. Each shell goes in a reef where the buyer has pieces and ignores the next hit on the buyer's pieces there, then comes back to your pool. Shells are rented: all of them come back at your Dawn. Shells can't be hit or taken."),
             ("Till", "Cards paid to you go into your Till, and at Dawn you may add cards from your hand. Every Day action costs one Till card."),
             ("Own shells", "Your crabs can wear shells from your pool for free, the same way."),
         ],
-        pieces="12 crabs. 4 markets (buildings). 8 shells.",
+        quirk=("Vacancy chain", "When another faction's building is removed from a reef with your crabs, one of your markets moves into the empty slot for free."),
+        craft="Your markets pay their reef's suit.",
+        pieces="12 crabs. 5 markets (buildings). 8 shells.",
         setup="1 market and 4 crabs in any reef.",
-        turn=[("Dawn", "Add cards to your Till."), ("Day", "Actions, one Till card each: move, recruit (2 crabs at a market, or at any gate if you have no market), or build a market in a reef you rule (the Till card must match the reef's suit)."), ("Dusk", "Set your shell price (1 to 3 cards), then score your markets.")],
-        scores=["At Dusk, 1 VP per market on the map.", "Gear crafted at your markets."],
+        turn=[("Dawn", "Add cards to your Till."), ("Day", "Actions, one Till card each: move, battle, recruit (3 crabs at a market, or at any gate if you have no market), or build a market in a reef you rule (the Till card must match the reef's suit)."), ("Dusk", "Set your shell price (1 to 3 cards), then score your markets.")],
+        scores=["At Dusk, 1 VP per market on the map."],
         note="When a big empty shell turns up, hermit crabs line up by size and swap homes down the line. Biologists call it a vacancy chain.",
     ),
     dict(
         key="anglers", name="Anglerfish", role="Trapper", glyph="abyss", color="angler",
         latin="Ceratias holboelli", common="deep-sea anglerfish",
-        complexity=3, reach=5,
+        complexity=3, reach=6,
         tagline="Follow the light.",
-        idea="They live in the Trench and never swim the reef. They hang lures with real rewards over it and eat whoever stays too long.",
-        core="Hang lures with real rewards; eat whoever stays",
-        scores_by="eating at lures",
-        verbs=dict(Move=False, Battle=True, Build=False, Recruit=True, Craft=False),
+        idea="They live in the Trench and never swim the reef. They hang lures with real rewards over it, and whoever takes the bait is hooked.",
+        core="Hang lures with real rewards; eat whoever bites",
+        scores_by="eating at lures and hooks",
+        choice="Treasure hooks a faction so you can snap it anywhere, Shelter protects whoever you want alive, Glory draws rulers in. Snap big to eat more, or small to keep anglers for tomorrow.",
+        ways=dict(Move="Move your lures", Battle="Snap from the Trench", Recruit="Discard for anglers", Craft="Lures, which go dark"),
         rules=[
             ("Lures", "At Dawn, place or move your lures in rim reefs or their neighbors and pick each lure's offer. <i>Treasure</i>: a faction that moves warriors here draws a card, once per turn. <i>Shelter</i>: warriors here can't be battled except by you. <i>Glory</i>: a faction that rules this reef at the end of its turn scores 1 VP. You start with 2 lures; the 3rd and 4th unlock after your snaps remove 4 and 8 warriors."),
             ("Snap", "At Dusk, at up to 2 lure or rim reefs with enemy warriors, you may bring up to 3 anglers out of the Trench and battle one faction there. You deal 1 hit before the dice, the first bite. Survivors sink back into the Trench."),
             ("The Trench", "Your anglers live in the Trench, off the map, where nothing can attack them."),
         ],
+        quirk=("Hooked", "A faction that takes a Treasure lure's card is hooked until your next Dusk: you can snap at it in any reef."),
+        craft="A lure pays its reef's suit, then goes dark: no offer, and no snap there, until you relight it at Dawn.",
         pieces="10 anglers. 4 lures (tokens).",
         setup="3 anglers in the Trench and 2 lures.",
         turn=[("Dawn", "Set your lures."), ("Day", "Discard up to 2 cards: each adds 2 anglers to the Trench."), ("Dusk", "Snap.")],
@@ -260,39 +296,45 @@ FACTIONS = [
         latin="Enteroctopus dofleini", common="giant Pacific octopus",
         complexity=4, reach=7,
         tagline="Eight arms. Eight opinions.",
-        idea="One giant octopus whose eight arms think for themselves. Each arm keeps a standing order and carries it out every turn, in number order, whether or not it still makes sense. Whatever the arms steal goes into the octopus's garden.",
+        idea="One giant octopus whose eight arms think for themselves. Each arm keeps a standing order and carries it out every turn, in number order. Whatever the arms steal goes into the garden, and when trouble comes, the octopus inks and jets away.",
         core="Program eight arms; steal treasures for the garden",
         scores_by="its garden",
-        verbs=dict(Move=True, Battle=True, Build=False, Recruit=True, Craft=False),
+        choice="Program the arms well and they run themselves. Spend treasures on gear, or keep them for the garden.",
+        ways=dict(Move="Reach orders; the Mantle jets", Battle="Grab orders", Recruit="Lost arms regrow", Craft="Spend garden treasures"),
         rules=[
-            ("Orders", "At Dawn, put 1 or 2 cards under arms with no order. The suit is the order. Kelp: <i>reach</i>, move that arm one channel, ignoring rule. Sponge: <i>grab</i>, battle in its reef. Pearl: <i>steal</i>, take an enemy token from its reef, or a random card from a faction with pieces there, into your garden. Moon: pick each time."),
+            ("Orders", "At Dawn, put 1 or 2 cards under arms with no order, and you may swap the orders of two arms. The suit is the order. Kelp: <i>reach</i>, move that arm one channel, ignoring rule. Sponge: <i>grab</i>, battle in its reef. Pearl: <i>steal</i>, take an enemy token from its reef, or a random card from a faction with pieces there, into your garden. Moon: pick each time."),
             ("Recoil", "Arms act from 1 to 8. If an arm can't carry out its order, discard the orders on it and on every higher arm, and lose 1 VP per order discarded."),
             ("Reach", "Arms stay within 2 channels of the Mantle, your body. After the Mantle moves, arms out of reach snap back to it. Lost arms keep their orders, skip their turn, and regrow at the Mantle at Dusk."),
         ],
+        quirk=("Ink", "When battled, you may discard a card: the battle ends before any hits, and your pieces there jet to a neighboring reef."),
+        craft="Garden treasures: a stolen card pays its suit, a stolen token pays any suit. Crafting spends them.",
         pieces="The Mantle and 8 numbered arms, all warriors.",
         setup="The Mantle and all 8 arms in one reef that isn't a gate.",
-        turn=[("Dawn", "Add orders."), ("Day", "Arms act, 1 to 8. Then the Mantle may move to any reef with one of your arms."), ("Dusk", "Regrow arms, then score the garden.")],
+        turn=[("Dawn", "Add orders, and swap two if you like."), ("Day", "Arms act, 1 to 8. Then the Mantle may move to any reef with one of your arms."), ("Dusk", "Regrow arms, then score the garden.")],
         scores=["Each treasure scores 1 VP when stolen, token or card.", "At Dusk, 1 VP per kind of treasure in your garden: each token type, and each suit of stolen card. If the Mantle is removed, the garden is lost and the Mantle returns at Dawn beside any arm, or at any gate if no arm is left."],
         note="About two thirds of an octopus's neurons are in its arms. Each arm can taste and grab on its own.",
     ),
     dict(
         key="cuttlefish", name="Cuttlefish", role="Illusionist", glyph="court", color="court",
         latin="Sepia apama", common="giant cuttlefish",
-        complexity=4, reach=3,
+        complexity=4, reach=5,
         tagline="Trust your eyes. Everyone else does.",
-        idea="Cuttlefish change color in a heartbeat. They repaint reefs to a new suit for every faction, and score by painting patterns across the map.",
-        core="Repaint the suits of reefs; score patterns",
+        idea="Cuttlefish change color in a heartbeat. They repaint reefs to a new suit for every faction, hypnotize whatever stands in the way, and score by ruling patterns across the map.",
+        core="Repaint the suits of reefs; rule patterns",
         scores_by="patterns on the map",
-        verbs=dict(Move=True, Battle=False, Build=False, Recruit=True, Craft=False),
+        choice="Paint toward your own patterns, hypnotize rivals out of the reefs you need, or hatch more cuttlefish to hold them.",
+        ways=dict(Move="Standard moves", Battle="Standard battles", Recruit="Hatch, and pigments", Craft="Your pigments"),
         rules=[
             ("Paint", "Discard a card to put a pigment of its suit (Moon: any suit) in a reef with your cuttlefish, or to move one of your pigments there. That reef is that suit for every faction and every rule."),
             ("Camouflage", "To battle your cuttlefish in a painted reef, a faction must first discard a card of that reef's suit."),
-            ("Galleries", "Three face-up Gallery cards each show a pattern, such as three connected reefs of one suit. At Dusk, score one pattern on the map that has your cuttlefish in each of its reefs, then replace it."),
+            ("Galleries", "Three face-up Gallery cards each show a pattern, such as three connected reefs of one suit. At Dusk, score every pattern made of reefs you rule, then replace each one you scored."),
         ],
+        quirk=("Hypnotize", "Discard a card: move up to 3 warriors of another faction from a reef with your cuttlefish to a neighboring reef. Cuttlefish hunt by rippling stripes until the prey freezes."),
+        craft="Your pigments pay their suit.",
         pieces="12 cuttlefish. 6 pigments (tokens, 2 per suit).",
         setup="3 cuttlefish in each of two reefs.",
-        turn=[("Dawn", "1 cuttlefish arrives in each reef with your pigment, or 2 at any gate if you have no pigment on the map."), ("Day", "3 actions: move or paint."), ("Dusk", "Score galleries.")],
-        scores=["One pattern per Dusk, worth 2 to 4 VP."],
+        turn=[("Dawn", "1 cuttlefish arrives in each reef with your pigment, or 2 at any gate if you have no pigment on the map."), ("Day", "3 actions: move, battle, paint, hypnotize, or hatch (discard a card: 2 cuttlefish in a reef of its suit where you have cuttlefish, or in any reef of its suit if you have none on the map)."), ("Dusk", "Score galleries.")],
+        scores=["At Dusk, every Gallery pattern you rule scores its 2 or 3 VP."],
         note="Cuttlefish can change color in under a second, using millions of pigment cells in their skin.",
     ),
 ]
@@ -313,9 +355,15 @@ PRESSURE = [
     ("Lionfish", "Octopus", "lone arms are easy to outnumber"),
     ("Lionfish", "Sea Snake", "a gorge mid-body cuts it"),
     ("Lionfish", "Remoras", "free remoras are easy to outnumber"),
-    ("Starfish", "Coral", "Rubble takes building slots"),
-    ("Starfish", "Hermit Crabs", "Rubble takes market slots"),
-    ("Starfish", "Sea Turtles", "Rubble takes nest slots"),
+    ("Starfish", "Coral", "devouring eats coral, and Rubble takes its slots"),
+    ("Starfish", "Hermit Crabs", "devouring eats markets"),
+    ("Starfish", "Sea Turtles", "devouring eats nests"),
+    ("Sardines", "Sea Turtles", "a wall of fish shoves turtles off the nest"),
+    ("Sardines", "Lionfish", "a wall of fish breaks up reefs they hold alone"),
+    ("Cuttlefish", "Lionfish", "hypnosis breaks up reefs they hold alone"),
+    ("Octopus", "Sharks", "ink makes hunts miss"),
+    ("Sea Snake", "Octopus", "coils crush lone arms"),
+    ("Coral", "Starfish", "stinging polyps fight the outbreak"),
     ("Parrotfish", "Coral", "grazing eats coral"),
     ("Parrotfish", "Starfish", "grazing eats Rubble"),
     ("Parrotfish", "Hermit Crabs", "grazing eats markets"),
@@ -342,60 +390,62 @@ LINEUPS = [
 ]
 
 CHANGES_SHARED = [
-    ("Pieces", "Draft 1 never defined a token. Blood had no owner, and sandbars and current arrows sat on channels where no rule could reach them.", "Four kinds of piece, each with fixed rules. Blood is neutral, and channel markers can't be hit."),
-    ("Crafting", "Every faction could craft items, but no plate said what it crafts with.", "Only buildings craft, so only the three factions that build can craft."),
-    ("Hits", "Stings, snaps, bait balls and grazing removed pieces with no shared definition, and Blood only counted battles.", "An attack is anything that deals hits. Blood and remora scraps follow any attack."),
-    ("Card draw", "Some plates repeated “draw a card at Dusk” and others didn't.", "Everyone draws 1 card at Dusk. Plates list only extra draws."),
-    ("Undefined words", "Jellyfish used “round” and anglerfish used “two channels from the Trench”, but neither was defined.", "A round is defined, and the Trench touches exactly the three rim reefs."),
-    ("Suit names", "Coral was both a card suit and a faction.", "The suit is now Sponge."),
-    ("Reach", "Reach claimed to measure how much map a faction holds, but the anglerfish hold none, and quiet lineups with no fighting were allowed.", "Reach now measures pressure on other factions, with new minimums per lineup."),
+    ("Crafting", "Only buildings crafted, so 11 of the 14 factions could never craft.", "Every faction crafts. Each plate names its crafting pieces: Blood, big schools, Rubble, swarms, lures, pigments, garden treasures and more."),
+    ("Doing things", "Most factions were missing one of moving, battling, recruiting or crafting, and the plates said “never”.", "Every faction moves, battles, recruits and crafts, each in its own way. The table below shows how."),
+    ("Choices", "Most factions had one obviously best move every turn.", "Each plate names the choice its player faces, and its rules pull against each other: the same Blood, Sand, Food or card can go two or three ways."),
+    ("Quirks", "The plates were dry.", "Every faction has one quirk taken from the real animal: slime pajamas, immortal jellyfish, stuffed lionfish, hatchlings running a gauntlet."),
+    ("Pushing", "There was no shared word for moving someone else's warriors.", "A push moves another faction's warriors for it, ignoring rule. Stings and riders treat it as that faction's own move."),
+    ("Recruiting", "Several factions could only add warriors in special cases, so a bad turn could leave them stuck.", "Every faction can add warriors every turn, most of them by discarding any card."),
 ]
 
 CHANGES_FACTIONS = [
-    ("Sharks", "“No homes”, yet they built Nurseries. Cards “paid for actions”, yet they also had 3 free ones. One rule scored only against the Shoal.", "No buildings: new sharks arrive from the open ocean. Cards buy one extra action, like every faction with a fixed number of actions."),
-    ("Sardines", "Merged schools lost track of the gate they came in by. Their plate said they love the jellyfish's currents while the food web said jellyfish hunt them.", "The game tracks every fish. Every relationship now comes from a rule."),
-    ("Coral", "Three coral types, Calcium, bleaching, spawning, battles and two scoring tracks. Its stinging cells copied the jellyfish sting.", "One coral type. It grows and spawns and never starts a fight."),
-    ("Jellyfish", "“You never command them”, yet they could battle and build stalks. Returning jellyfish needed stalks that might not exist.", "They bend currents and bloom, nothing else."),
-    ("Parrotfish", "Sand came from ruling reefs, not from chewing. Cays blocked everyone without saying who rules them. A cocoon rule added a fifth system.", "Sand comes only from grazing, and islands belong to the parrotfish."),
-    ("Hermit Crabs", "Shells were armor for sale, the crabs' own armor and a conveyor line at once. “Each market moves the line” contradicted “the line moves when a large shell arrives.” They sold items they had no way to make.", "One pool of shells that goes out and comes back."),
-    ("Anglerfish", "Lure count was “your Glow”, but an upgrade also gave +1 lure, and Glow was spent as money too. Their Gullet clashed with jellyfish immortality. “Fish and sharks chase light” had no rule behind it.", "No Glow. Extra lures unlock by eating."),
-    ("Siphon Chain", "“Loose pieces touching the chain” and “walls off the middle” had no rules behind them, on top of four zooid types.", "Now the Sea Snake: the same one-body idea with an animal everyone knows, in three rules."),
-    ("Octopus", "Arms stole items from reefs, but items live on faction boards, and sandbars, which sit on channels. Dens, ink, regrowth, garden and recoil all ran at once.", "Arms steal tokens and cards. Dens and ink are gone."),
-    ("Cuttlefish", "Pigments were placed at both Dawn and Day, across six systems: paint, camouflage, hypnosis, sneakers, salons and galleries.", "Paint, camouflage and galleries."),
-    ("Food web", "It said every faction presses on at least two others, but coral pressed on none. Several claims had no rule behind them.", "Every “hurts” is generated from a rule and appears as a matching “hurt by” on the other plate."),
+    ("Sharks", "Hunt, feed, repeat. Blood only ever meant points.", "Each Blood is a meal, a frenzy of 2 new sharks, or gear. Sharks at a gate can dive to any other gate."),
+    ("Sardines", "They could only move and leave.", "Big schools mob, rallies add fish with any card, big schools craft, and a school of 6 shoves weaker factions aside."),
+    ("Lionfish", "Move and gorge, nothing else.", "Breeding picks where the young go, a release brings more with any card, gorging can eat tokens and buildings, and stuffed lionfish can't move."),
+    ("Starfish", "Stripping was automatic, so starfish only chose where to crawl.", "Devour is an action: eat a building or lay Rubble. Starfish crawl toward buildings, battle, and craft with Rubble."),
+    ("Coral", "Grow or spawn, and the better one was usually obvious.", "Coral battles, bleaches coral for cards, and scores a Nursery point for every coral reef with visitors."),
+    ("Jellyfish", "They could never battle or craft, and a wiped-out swarm was gone.", "A pulse battles once a turn, swarms craft, and the last jellyfish removed leaves a cyst that becomes 2."),
+    ("Parrotfish", "Sand only built sandbars and islands.", "Sand also pays for gear, and a slime cocoon protects a reef at the cost of pinning it."),
+    ("Sea Turtles", "They could never battle, and the only choice was which way to swim.", "Turtles battle, ride currents, spend Food on gear, and their hatchlings run a gauntlet."),
+    ("Sea Snake", "It grew only by biting.", "Molting grows it with any card, the tail pays for gear, and coiling back on itself squeezes everything there."),
+    ("Remoras", "Attach and wait.", "Remoras clean their hosts for a card and a point, pile into their fights, and hitch on with any card."),
+    ("Hermit Crabs", "They couldn't battle.", "Crabs battle, and move into wrecked homes for free."),
+    ("Anglerfish", "They only snapped.", "Taking the bait hooks a faction anywhere on the map, and a deep hoard of anglers scores."),
+    ("Octopus", "A bad order could only recoil.", "Swap two orders each Dawn, ink away from battles, and spend treasures on gear."),
+    ("Cuttlefish", "The app ticked every pattern you held, but only one scored. New cuttlefish only came at pigments, so the faction could stall.", "Every pattern you hold scores, and the easy two-reef patterns are gone. A hatch brings 2 cuttlefish with any card, and hypnosis pushes rivals away."),
 ]
 
-# Draft 3: every faction checked for ways to be wiped out or stuck with nothing useful to do.
-# (faction, what could go wrong, what stops it now)
+# Draft 4: every faction checked again for ways to be wiped out or stuck, now that each must be able to
+# add warriors every turn. (faction, what could go wrong, what stops it now)
 SOFTLOCKS = [
-    ("Sharks", "Only 1 shark arrived per turn, so one bad fight left the pack too small to recover.", "Sharks arrive 1 at a time plus 1 per Blood token on the map, up to 3, all at one gate so they form one group."),
-    ("Sardines", "None found: a new run arrives every Dawn. Sandbars could cut a gate off.", "Any faction with warriors at both ends of a sandbar can dig it out, so no gate stays closed."),
-    ("Lionfish", "Two starting fish, and breeding needs 2 in a reef. Lose one early and the invasion was over for good.", "At Dawn, with fewer than 2 lionfish on the map, 2 more arrive at any gate."),
-    ("Starfish", "Spawning needed starfish already on the map, so a wiped-out outbreak stayed gone.", "With none on the map, a spawn can go into any reef of the card's suit. Regrowth is automatic."),
-    ("Coral", "Found by bot games: coral wiped off the map could never come back.", "With no coral left, a spawn drifts 2 polyps into any reef of the card's suit."),
-    ("Jellyfish", "Blooms needed jellyfish already on the map.", "With none on the map, a bloom puts 3 jellyfish into one reef of the card's suit."),
-    ("Parrotfish", "None found: 2 arrive every Dawn, and any reef they rule can be chewed for sand.", "No change."),
-    ("Sea Turtles", "Turtles were never replaced. Every one lost was gone for good.", "Hatchlings become new turtles while you have fewer than 4. With no turtles at all, one returns to a shore reef."),
-    ("Sea Snake", "A snake cut down to its Head deals 1 hit at most, so it could barely eat enough to grow back.", "At Dawn, a snake with fewer than 4 pieces adds a segment."),
-    ("Remoras", "None found: 1 arrives every Dawn, and attached remoras can't be hit.", "The riding rule is now written for groups, so it always says where a remora goes."),
-    ("Hermit Crabs", "Recruiting needed a market. Losing every market and crab ended the faction.", "With no market, recruits arrive at any gate."),
-    ("Anglerfish", "If nobody took the bait, the anglers could never score.", "Snaps also rise at rim reefs, lure or not."),
-    ("Octopus", "With the Mantle and every arm lost, the Mantle had nowhere to return.", "With no arm left, the Mantle returns at any gate, and the arms regrow around it."),
-    ("Cuttlefish", "New cuttlefish only arrived at pigments. Lose them all and nothing came back.", "With no pigment on the map, 2 arrive at any gate."),
+    ("Sharks", "New sharks depended on Blood already on the map, so a quiet table meant 1 shark a turn.", "1 shark every Dawn, 2 with none on the map, and any Blood can become 2 sharks in a frenzy."),
+    ("Sardines", "More than 3 fish a turn needed cards of the gate's suit.", "3 arrive every Dawn, and a rally adds 2 with any card, in a reef of its suit."),
+    ("Lionfish", "New lionfish only came from breeding, or after being nearly wiped out.", "A release brings 2 at any gate with any card, every turn."),
+    ("Starfish", "None found: spawning works in any reef of the card's suit when none are on the map.", "No change."),
+    ("Coral", "Without cards, coral could neither grow nor spawn.", "Bleaching turns a coral into 2 cards in any turn you don't grow."),
+    ("Jellyfish", "A reef wiped clean stayed empty until a bloom of its suit.", "The last jellyfish removed leaves a cyst that becomes 2 at Dawn."),
+    ("Parrotfish", "A cocoon could have pinned the only parrotfish on the map.", "Cocoons last only until your next Dusk, and 2 parrotfish still arrive every Dawn."),
+    ("Sea Turtles", "Eaten hatchlings could have left the turtles with no way back.", "An eaten hatchling still leaves its nest, and with no turtles at all, one returns to a shore reef."),
+    ("Sea Snake", "Growing needed prey at the Head.", "A molt adds 2 segments with any card."),
+    ("Remoras", "Only 1 remora arrived a turn.", "A hitch attaches 2 more with any card, in a reef of its suit."),
+    ("Hermit Crabs", "None found: recruits arrive at any gate with no market, and any card can go into the Till.", "No change."),
+    ("Anglerfish", "None found: any card adds anglers to the Trench.", "No change."),
+    ("Octopus", "A badly ordered stack of arms recoiled every turn.", "Swap two orders at every Dawn."),
+    ("Cuttlefish", "With a pigment on the map, new cuttlefish only arrived at pigments. Lose the cuttlefish around them and the faction stalled.", "A hatch brings 2 cuttlefish with any card, every turn."),
 ]
 
-# What 126 bot games across 2-4 faction lineups showed, and what changed. (faction, found, change)
+# What 126 bot games showed after the draft 4 redesign, and what changed. (faction, found, change)
 BALANCE = [
-    ("Starfish", "Scored every Rubble reef every Dusk: 4.8 VP a round, winning 16 games of 19.", "6 Rubble tokens instead of 8, and 1 VP for every 2 Rubble reefs."),
-    ("Cuttlefish", "Scored every pattern it held each Dusk: 4.6 VP a round.", "One pattern per Dusk."),
-    ("Anglerfish", "Snapped at every lure and rim reef, 2 hits before the dice each time.", "Up to 2 snaps per Dusk, and the first bite is 1 hit."),
-    ("Hermit Crabs", "0.6 VP a round: buying a shell handed the crabs a point, so nobody bought.", "Markets score 1 VP every Dusk; a shell sold feeds the Till instead. Shells are rented until the crabs' next Dawn."),
-    ("Lionfish", "Gorging alone scored under 1 VP a round.", "At Dusk, 1 VP per reef held alone with 4 or more lionfish."),
-    ("Octopus", "Garden kinds came slowly.", "Stolen cards score 1 VP, like stolen tokens."),
-    ("Sea Turtles", "The long trip from feeding to nest paid too little.", "Laying adds 1 egg, and eggs score when laid and again when they hatch."),
-    ("Parrotfish", "Sand came too slowly for islands.", "Grazing gives 3 Sand, chewing 2."),
-    ("Sharks", "Hunted well but scored little.", "Each Blood eaten scores 2 VP."),
-    ("Sea Snake · Jellyfish · Sardines", "A little behind the rest.", "Snake reefs round up; swarms of 3 score, 6 or more score 2; schools of 7-9 score 4 and 10+ score 6."),
+    ("Every faction", "Crafting for everyone added a new stream of points: first games ended in round 5 or 6.", "Each faction's other scoring was trimmed below, so games end around round 9 again."),
+    ("Coral", "Bleached a coral for 2 cards and regrew it for points in the same turn: 4.8 VP a round.", "A turn that bleaches can't grow, bleached coral is gone for good, coral scores 1 VP per 4 on the map, and each reef of coral crafts once."),
+    ("Cuttlefish", "Scoring every pattern held was 6 VP a round.", "Patterns count reefs you rule, not just reefs you're in, and are worth 2 or 3 VP."),
+    ("Lionfish", "Bred into every neighbor and held reefs alone: won 20 of 29.", "Breed in reefs with 3 or more, score reefs held alone with 6 or more, gorge only warriors, and release once a turn."),
+    ("Remoras", "Cleaned every host every turn.", "One cleaning a turn, for a card each. Riding scores only hosts with 2 or more remoras, and 8 remoras instead of 10."),
+    ("Anglerfish", "Every lure also paid for crafting every turn, and a deep hoard scored most Dusks.", "A lure that pays goes dark until you relight it at Dawn. Only Treasure hooks. No hoard."),
+    ("Starfish", "Laying Rubble scored twice: when laid, and every Dusk after.", "Rubble scores only at Dusk."),
+    ("Octopus", "The bot never set orders, because an order looked no better than the card it cost.", "Bots value a standing order that will act; swapping orders has to help."),
+    ("Parrotfish", "Spent all their Sand on gear and never raised islands.", "Gear costs 3 Sand a suit, and islands cost 4 Sand and score 3 VP when raised."),
+    ("Sea Turtles · Hermit Crabs", "A little behind the rest.", "Turtles lay 2 eggs plus 1 per Food; crabs recruit 3 and have 5 markets."),
 ]
 
 SHARED_RULES = [
@@ -403,12 +453,12 @@ SHARED_RULES = [
     ("Edges of the map", "The four corner reefs are gates to the open ocean. The top row is the shore. The three reefs touching the Trench are the rim.", True),
     ("A turn", "Dawn, Day, Dusk. At Dusk every faction draws a card and discards down to five. A round is one turn for every faction.", False),
     ("Pieces", "<b>Warriors</b> fight and count for rule. <b>Buildings</b> fill slots and count for rule. <b>Tokens</b> sit in a reef and don't count. <b>Channel markers</b> sit on channels, one per channel, and can't be hit. Removed pieces go back to their owner's supply.", False),
-    ("Rule and moving", "You rule a reef when you have the most warriors and buildings there; a tie means nobody does. A move takes any number of your warriors to a neighboring reef, and you must rule where you leave or where you arrive. Placing pieces from your supply isn't moving.", False),
+    ("Rule and moving", "You rule a reef when you have the most warriors and buildings there; a tie means nobody does. A move takes any number of your warriors to a neighboring reef, and you must rule where you leave or where you arrive. Placing pieces from your supply isn't moving. A <b>push</b> moves another faction's warriors for it, ignoring rule; it counts as that faction's move.", False),
     ("Currents", "Moving along a current never needs rule. Four currents circle the middle of the map as the Gyre.", True),
     ("Attacks and hits", "An attack is a battle or any ability that deals hits. Each hit removes one of the target's pieces in that reef, warriors first, and its owner picks which. Removing an enemy building or token scores 1 VP. Removing warriors scores nothing unless a plate says so.", False),
     ("Battle", "Pick a reef with your warriors and a faction with pieces there. Roll two dice showing 0 to 3: you deal the higher, the defender deals the lower, each capped by its warriors there. A defender with no warriors takes 1 extra hit. An Ambush card of the reef's suit deals 2 hits before the roll.", False),
     ("Cards", "54 cards in Kelp, Sponge, Pearl and wild Moon. Once per turn, a faction with a fixed number of Day actions may discard a card for one more.", False),
-    ("Gear", "Each building can craft once per turn, paying with its reef's suit. Gear scores points and gives a small lasting bonus. Factions without buildings can't craft.", False),
+    ("Gear", "Every faction crafts. Its plate names its crafting pieces, and each piece pays one suit, once per turn. Pay a gear card's cost to craft it: score its VP and keep its lasting bonus.", False),
     ("Winning", "First to 30 VP. Once you have 10 VP you may play a Dominance card instead: you stop scoring, and you win if you rule three reefs of its suit at the start of your turn (Moon: two opposite gates).", False),
 ]
 
@@ -454,13 +504,19 @@ def check():
         n = f["name"]
         if len(f["rules"]) != 3:
             errors.append(f"{n}: has {len(f['rules'])} special rules, every faction has exactly 3")
-        if f["verbs"]["Craft"] != f["verbs"]["Build"]:
-            errors.append(f"{n}: only buildings craft, so Craft must equal Build")
+        if len(f.get("quirk", ())) != 2:
+            errors.append(f"{n}: needs exactly one quirk")
+        if not f.get("craft"):
+            errors.append(f"{n}: every faction crafts, so its plate must name its crafting pieces")
+        if sorted(f.get("ways", {})) != sorted(VERBS) or not all(f["ways"].values()):
+            errors.append(f"{n}: must say how it does each of {', '.join(VERBS)}")
+        if not f.get("choice"):
+            errors.append(f"{n}: must name the choice its player faces")
         if len(f["scores"]) > 2:
             errors.append(f"{n}: scores in more than 2 ways")
         if [p for p, _ in f["turn"]] != ["Dawn", "Day", "Dusk"]:
             errors.append(f"{n}: turn must be Dawn, Day, Dusk")
-        text = " ".join([t for _, t in f["rules"]] + [t for _, t in f["turn"]] + f["scores"] + [f["pieces"], f["setup"]])
+        text = " ".join([t for _, t in f["rules"]] + [t for _, t in f["turn"]] + f["scores"] + [f["pieces"], f["setup"], f["quirk"][1], f["craft"], f["choice"]] + list(f["ways"].values()))
         for other in names:
             if other != n and re.search(rf"\b{re.escape(other)}\b", text):
                 errors.append(f"{n}: a rule names another faction ({other})")
@@ -553,12 +609,9 @@ def pips(n):
     return f'<span class="pips" aria-label="{n} of 4">' + "".join(f'<i class="{"on" if i < n else ""}"></i>' for i in range(4)) + "</span>"
 
 
-def verb_chips(f):
-    out = []
-    for v in VERBS:
-        on = f["verbs"][v]
-        out.append(f'<span class="{"on" if on else "off"}">{v}<span class="vh">{"" if on else " (never)"}</span></span>')
-    return '<p class="verbs">' + "".join(out) + "</p>"
+def ways_list(f):
+    items = "".join(f"<div><dt>{v}</dt><dd>{esc(f['ways'][v])}</dd></div>" for v in VERBS)
+    return f'<dl class="ways">{items}</dl>'
 
 
 def pressure_lines(f):
@@ -576,6 +629,7 @@ def pressure_lines(f):
 
 def plate(i, f):
     rules = "".join(f"<li><b>{t}.</b> {esc(d)}</li>" for t, d in f["rules"])
+    qt, qd = f["quirk"]
     turn = "".join(f"<dt>{p}</dt><dd>{esc(d)}</dd>" for p, d in f["turn"])
     scores = "".join(f"<li>{esc(s)}</li>" for s in f["scores"])
     return f'''
@@ -587,13 +641,17 @@ def plate(i, f):
     </div>
     <p class="tagline">“{f["tagline"]}”</p>
     <p class="idea">{esc(f["idea"])}</p>
-    {verb_chips(f)}
+    <p class="choice"><b>The choice</b>{esc(f["choice"])}</p>
+    {ways_list(f)}
     <div class="plate-body">
       <div>
         <h4>Its three rules</h4>
         <ul class="mech">{rules}</ul>
+        <h4 class="qh">Quirk</h4>
+        <p class="quirk"><b>{qt}.</b> {esc(qd)}</p>
       </div>
       <div class="side">
+        <div><h4>Crafts with</h4><p>{esc(f["craft"])}</p></div>
         <div><h4>Pieces</h4><p>{esc(f["pieces"])} <span class="muted">Setup: {esc(f["setup"])}</span></p></div>
         <div><h4>A turn</h4><dl class="turn">{turn}</dl></div>
         <div><h4>Scores</h4><ul>{scores}</ul></div>
@@ -607,19 +665,16 @@ def plate(i, f):
 
 
 def glance_table():
-    head = "".join(f"<th scope=\"col\" class=\"v\">{v}</th>" for v in VERBS)
+    head = "".join(f"<th scope=\"col\" class=\"w\">{v}</th>" for v in VERBS)
     rows = []
     for i, f in enumerate(FACTIONS, 1):
-        cells = "".join(
-            f'<td class="v">{"<span class=dot aria-label=yes></span>" if f["verbs"][v] else "<span class=dash aria-label=never></span>"}</td>'
-            for v in VERBS
-        )
+        cells = "".join(f'<td class="w">{esc(f["ways"][v])}</td>' for v in VERBS)
         rows.append(
             f'<tr><td class="num">{roman(i)}</td><th scope="row"><a href="#{f["key"]}">{portrait(f, "mini")}<span>{f["name"]}</span></a></th>'
-            f'<td class="core">{esc(f["core"])}</td>{cells}<td class="by">{esc(f["scores_by"])}</td></tr>'
+            f'{cells}<td class="by">{esc(f["scores_by"])}</td></tr>'
         )
     return f'''<div class="table-scroll"><table class="glance">
-      <thead><tr><th scope="col" class="num">Plate</th><th scope="col">Faction</th><th scope="col">Core idea</th>{head}<th scope="col">Scores by</th></tr></thead>
+      <thead><tr><th scope="col" class="num">Plate</th><th scope="col">Faction</th>{head}<th scope="col">Scores by</th></tr></thead>
       <tbody>{"".join(rows)}</tbody></table></div>'''
 
 
@@ -666,16 +721,15 @@ def map_svg():
 
 
 def principles():
-    never_battle = sum(1 for f in FACTIONS if not f["verbs"]["Battle"])
-    never_build = sum(1 for f in FACTIONS if not f["verbs"]["Build"])
     items = [
-        ("One idea.", "Every faction is built around a single core idea and has exactly three special rules."),
-        ("Only what it needs.", f"{never_battle} of the {len(FACTIONS)} factions never start a battle, and {never_build} never build. The table below shows what each one does and never does."),
-        ("Shared words.", "Every rule is written with the same words: warrior, building, token, channel marker, attack, hit, rule. A sting is a hit, so a turtle's shell ignores it without a special case."),
+        ("One idea.", "Every faction is built around a single core idea, with exactly three rules and one quirk."),
+        ("Its own way.", f"All {len(FACTIONS)} factions move, battle, recruit and craft, each in its own way. The table below shows how."),
+        ("A real choice.", "Every plate names the choice its player faces each turn. The same Blood, Sand, Food or card can go two or three ways, and no option is right every time."),
+        ("A quirk from the animal.", "Each faction has one rule taken straight from the real animal, and it should make you smile."),
+        ("Shared words.", "Every rule is written with the same words: warrior, building, token, channel marker, attack, hit, push, rule. A sting is a hit, so a turtle's shell ignores it without a special case."),
         ("No names.", "No rule mentions another faction. Every interaction comes from the shared words."),
         ("Both sides agree.", "Every “hurts” on one plate appears as “hurt by” on the other."),
-        ("No dead ends.", "Every faction always has a way to put pieces back on the map, however badly things go. The softlock review above checks each one, and bot games test it."),
-        ("Always a way to win.", "Each faction scores in one or two ways, both from its core idea, and can reach 30 VP in any lineup it's allowed in."),
+        ("No dead ends.", "Every faction can add warriors every turn, however badly things go. The softlock review above checks each one, and bot games test it."),
     ]
     return "".join(f"<li><b>{t}</b> {d}</li>" for t, d in items)
 
@@ -704,11 +758,11 @@ def balance_html():
     return f'''<div class="table-scroll"><table class="glance soft">
       <thead><tr><th scope="col">Faction</th><th scope="col">What bot games showed</th><th scope="col">What changed</th></tr></thead>
       <tbody>{rows}</tbody></table></div>
-      <p class="note">After these changes every faction scores 2.0 to 2.8 VP a round against the bots, and a game usually ends around round 10 (5 to 29 in the bot games).</p>'''
+      <p class="note">After these changes every faction scores 2.2 to 2.9 VP a round against the bots, and a game usually ends around round 9 (5 to 22 in the bot games).</p>'''
 
 
 def changes_html(items):
-    return "".join(f'<li><b>{t}</b><p><span class="was">Draft 1:</span> {esc(w)}</p><p><span class="now">Now:</span> {esc(n)}</p></li>' for t, w, n in items)
+    return "".join(f'<li><b>{t}</b><p><span class="was">Draft 3:</span> {esc(w)}</p><p><span class="now">Now:</span> {esc(n)}</p></li>' for t, w, n in items)
 
 
 def build(path):
@@ -739,7 +793,9 @@ def export_plates(path):
              rules=[dict(title=t, text=strip(d)) for t, d in f["rules"]],
              pieces=f["pieces"], setup=f["setup"],
              turn=[dict(phase=ph, text=strip(d)) for ph, d in f["turn"]],
-             scores=f["scores"], verbs=f["verbs"], complexity=f["complexity"], reach=f["reach"])
+             scores=f["scores"], ways=f["ways"], choice=f["choice"],
+             quirk=dict(title=f["quirk"][0], text=strip(f["quirk"][1])), craft=f["craft"],
+             complexity=f["complexity"], reach=f["reach"])
         for f in FACTIONS
     ]
     Path(path).write_text(json.dumps(dict(plates=plates, shared=[dict(title=t, text=re.sub(r"</?b>", "", d)) for t, d, _ in SHARED_RULES]), indent=1, ensure_ascii=False) + "\n", encoding="utf-8")

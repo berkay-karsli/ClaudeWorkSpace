@@ -39,6 +39,8 @@ enum class PieceType(val label: String, val building: Boolean, val fillsSlot: Bo
     EGG("egg", building = false, fillsSlot = false),
     LURE("lure", building = false, fillsSlot = false),
     PIGMENT("pigment", building = false, fillsSlot = false),
+    CYST("cyst", building = false, fillsSlot = false),
+    COCOON("cocoon", building = false, fillsSlot = false),
 }
 
 /**
@@ -89,7 +91,7 @@ sealed class FactionState
 @Serializable
 @SerialName("sharks")
 class SharksState(
-    var supply: Int = 10,
+    var supply: Int = 12,
     /** Sharks per reef that have moved this turn. The rest drown at Dusk. */
     val moved: MutableMap<Int, Int> = mutableMapOf(),
     var arrived: Boolean = false,
@@ -97,7 +99,7 @@ class SharksState(
 
 @Serializable
 @SerialName("coral")
-class CoralState(var polyps: Int = 20, var coral: Int = 15, var spawned: Boolean = false) : FactionState()
+class CoralState(var polyps: Int = 20, var coral: Int = 15, var spawned: Boolean = false, var bleached: Int = 0) : FactionState()
 
 @Serializable
 @SerialName("sardines")
@@ -108,11 +110,19 @@ class SardinesState(
     var runGate: Int? = null,
     var runDone: Boolean = false,
     var exitDone: Boolean = false,
+    /** Where a school of 6 or more just arrived and may push, until the next action. */
+    var pushAt: Int? = null,
 ) : FactionState()
 
 @Serializable
 @SerialName("lionfish")
-class LionfishState(var supply: Int = 24) : FactionState()
+class LionfishState(
+    var supply: Int = 24,
+    /** Reefs where the lionfish gorged this turn: they can't move out. */
+    val stuffed: MutableSet<Int> = mutableSetOf(),
+    /** Reefs still to breed this Dusk. */
+    val breeding: MutableList<Int> = mutableListOf(),
+) : FactionState()
 
 @Serializable
 @SerialName("starfish")
@@ -123,6 +133,7 @@ class StarfishState(var supply: Int = 20, var rubble: Int = 6, var spawnDone: Bo
 class JellyfishState(
     var supply: Int = 24,
     var arrows: Int = 4,
+    var cysts: Int = 4,
     /** The Dusk drift, planned once: reef to destination, -1 while undecided. */
     val drift: MutableMap<Int, Int> = mutableMapOf(),
     var driftPlanned: Boolean = false,
@@ -137,6 +148,8 @@ class ParrotfishState(
     var sand: Int = 0,
     val islands: MutableSet<Int> = mutableSetOf(),
     var arrivals: Int = 0,
+    var cocoon: Int = 1,
+    var cocoonDone: Boolean = false,
 ) : FactionState()
 
 @Serializable
@@ -163,7 +176,7 @@ class SnakeState(
 @Serializable
 @SerialName("remoras")
 class RemorasState(
-    var supply: Int = 10,
+    var supply: Int = 8,
     /** Remoras attached per reef, per host faction. */
     val attached: MutableMap<Int, MutableMap<FactionId, Int>> = mutableMapOf(),
     var arrived: Boolean = false,
@@ -173,7 +186,7 @@ class RemorasState(
 @SerialName("crabs")
 class CrabsState(
     var supply: Int = 12,
-    var markets: Int = 4,
+    var markets: Int = 5,
     var marketsBuilt: Int = 0,
     var pool: Int = 8,
     var price: Int = 1,
@@ -195,6 +208,8 @@ class AnglersState(
     var luresDone: Boolean = false,
     val snapped: MutableSet<Int> = mutableSetOf(),
     var snapsDone: Boolean = false,
+    /** Factions that took the bait since the last Dusk: they can be snapped anywhere. */
+    val hooked: MutableSet<FactionId> = mutableSetOf(),
 ) : FactionState()
 
 /** A stolen treasure: a token (its type and owner) or a card. */
@@ -213,6 +228,7 @@ class OctopusState(
     var ordersAdded: Int = 0,
     var ordersDone: Boolean = false,
     var mantleDone: Boolean = false,
+    var rewired: Boolean = false,
 ) : FactionState()
 
 @Serializable
@@ -248,8 +264,6 @@ enum class Phase { SETUP, DAWN, DAY, DUSK, OVER }
 class Turn(
     var actionsLeft: Int = 0,
     var surgeUsed: Boolean = false,
-    /** Buildings already used for crafting this turn, per reef. */
-    val crafted: MutableMap<Int, Int> = mutableMapOf(),
     /** Per-turn counters, such as how many blooms a faction has made. */
     val used: MutableMap<String, Int> = mutableMapOf(),
     var shopDone: Boolean = false,

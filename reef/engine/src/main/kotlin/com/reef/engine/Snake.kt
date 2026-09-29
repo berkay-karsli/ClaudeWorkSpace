@@ -9,6 +9,7 @@ object SnakeRules : FactionRules {
     const val SETUP = 4
     const val SMALL = 4
     const val LONG = 9
+    const val MOLT = 2
 
     override fun warriorNoun(n: Int) = if (n == 1) "piece" else "pieces"
     override fun newState(): FactionState = SnakeState()
@@ -50,8 +51,13 @@ object SnakeRules : FactionRules {
     override fun bonusActions(g: GameState, p: Int) = if (st(g, p).body.size >= LONG) 1 else 0
 
     override fun dayOptions(g: GameState, p: Int): List<Option> {
-        val head = st(g, p).body.firstOrNull() ?: return emptyList()
-        return Game.neighbors(g, head, id).map { Slither(head, it) } + Game.battleTargets(g, p, head).map { Bite(head, it) }
+        val s = st(g, p)
+        val head = s.body.firstOrNull() ?: return emptyList()
+        val out = mutableListOf<Option>()
+        out += Game.neighbors(g, head, id).map { Slither(head, it) }
+        out += Game.battleTargets(g, p, head).map { Bite(head, it) }
+        if (s.body.size < PIECES) out += g.players[p].hand.distinct().map { Molt(it) }
+        return out
     }
 
     override fun applyDay(g: GameState, p: Int, o: Option) {
@@ -59,6 +65,8 @@ object SnakeRules : FactionRules {
         when (o) {
             is Slither -> {
                 val old = s.body.toList()
+                // A coil: the Head slithers into a reef where the rest of the body already is.
+                val coil = old.drop(1).contains(o.to)
                 // The Head moves; each segment moves to where the piece ahead of it was.
                 for (i in s.body.indices) s.body[i] = if (i == 0) o.to else old[i - 1]
                 sync(g, p)
@@ -70,11 +78,42 @@ object SnakeRules : FactionRules {
                     if (s.body.isEmpty() || g.winner != null) break
                     Game.afterArrive(g, p, move.first, move.second, n)
                 }
+                if (coil && s.body.firstOrNull() == o.to) squeeze(g, p, o.to)
+            }
+            is Molt -> {
+                Game.discardFromHand(g, p, o.cardId)
+                Game.log(g, "Sea Snake: molt, shedding the old skin.")
+                grow(g, p, MOLT)
             }
             is Bite -> Game.startBattle(g, p, o.reef, o.prey)
             else -> error("Sea Snake can't ${o.describe()}")
         }
     }
+
+    /** A coil: every other faction's warriors in [reef] take 1 hit. */
+    private fun squeeze(g: GameState, p: Int, reef: Int) {
+        val prey = g.players.indices.filter { q -> q != p && g.reefs[reef].warriors(g.players[q].faction) > 0 && !Game.rules(g, q).immune(g, q, reef) }
+        if (prey.isEmpty()) return
+        Game.log(g, "Sea Snake: coil around everything in ${Board.name(reef)}!")
+        for (q in prey) {
+            if (g.winner != null) return
+            Game.hit(g, p, q, reef, 1, Source.COIL, AttackCtx())
+        }
+    }
+
+    /** Shed the tail: each segment taken off the end pays any suit. The Head can't be shed. */
+    override fun craftUnits(g: GameState, p: Int): List<CraftUnit> =
+        List(maxOf(0, st(g, p).body.size - 1)) { CraftUnit("tail", Suit.MOON, spend = true) }
+
+    override fun spendCraftUnit(g: GameState, p: Int, unit: CraftUnit) {
+        val s = st(g, p)
+        val tail = s.body.removeAt(s.body.lastIndex)
+        sync(g, p)
+        RemorasRules.dropOff(g, id, tail)
+        Game.log(g, "Sea Snake: shed the tail in ${Board.name(tail)} (${s.body.size} pieces).")
+    }
+
+    override fun pushable(g: GameState, p: Int, reef: Int) = false
 
     /** Adds up to [n] segments at the tail. */
     fun grow(g: GameState, p: Int, n: Int) {

@@ -169,6 +169,39 @@ def lure_glory():
     return lure("lure_glory", "#e05aa8", star)
 
 
+def lure_dark():
+    a = Art("lure_dark", 48, 48, "piece")
+    a.add(taper([(6, 46), (8, 30), (16, 16), (24, 14)], 3, 2), fill="#3a3f8a", stroke="#0f1030", width=1)
+    a.add(circle(28, 20, 8), fill=rad(26, 18, 10, (0, "#8a8f9e"), (1, "#3c4150")), stroke="#0f1030", width=1.4)
+    a.line("M24,16 L32,24 M32,16 L24,24", "#0f1030", 1.4)
+    return a
+
+
+def piece_cyst():
+    """What an immortal jellyfish shrinks into: a small bulb on a stalk, ready to grow back."""
+    a = Art("piece_cyst", 48, 48, "piece")
+    a.add(ellipse(24, 42, 12, 3), fill="#8d8173", stroke="#3a2a4a", width=1.2)
+    a.add(taper([(24, 42), (23, 34), (24, 28)], 4, 3), fill="#b99ad8", stroke="#3a2a4a", width=1.2)
+    a.add(blob([(24, 8), (33, 12), (36, 21), (32, 29), (24, 31), (16, 29), (12, 21), (15, 12)]),
+          fill="#9a6cc8", stroke="#3a2a4a", width=1.6)
+    for x in (18, 24, 30):
+        a.add(circle(x, 21, 1.8), fill="#f3e7cc")
+    a.add(taper([(18, 16), (21, 12), (26, 11)], 2.4, 1), fill="#ffffff", alpha=0.6)
+    return a
+
+
+def piece_cocoon():
+    """A parrotfish asleep in its bubble of slime."""
+    a = Art("piece_cocoon", 48, 48, "piece")
+    a.add(ellipse(24, 26, 20, 16), fill=rad(20, 20, 22, (0, "#f4fffb", 0.9), (0.7, "#bfeee4", 0.75), (1, "#6fcfc0", 0.8)), stroke="#1f5a52", width=1.6)
+    with a.group(tx=0, ty=0):
+        a.add(blob([(33, 27), (27, 22), (17, 22.5), (12, 27), (17, 31.5), (27, 32)]), fill="#5fe0cc", stroke="#0e5348", width=1.3)
+        a.add(blob([(12, 27), (7, 23), (8, 27), (7, 31)]), fill="#5fe0cc", stroke="#0e5348", width=1.1)
+        a.line("M27,25.5 Q29,24.5 31,25.5", "#0e5348", 1.2)
+    a.add(taper([(12, 17), (18, 13), (26, 12)], 3, 1), fill="#ffffff", alpha=0.7)
+    return a
+
+
 def pigment(name, color):
     a = Art(name, 48, 48, "piece")
     pts = []
@@ -552,6 +585,143 @@ def _recruit(a):
     a.line("M34,11.5 V20.5 M29.5,16 H38.5", INK, 2.6)
 
 
+def _feedblood(a):
+    a.add(blob([(16, 6), (22, 16), (26, 25), (24, 34), (16, 38), (8, 34), (6, 25), (10, 16)]),
+          fill=rad(13, 20, 18, (0, "#ff6b6b"), (0.6, "#c81e2c"), (1, "#7a0c16")), stroke=INK, width=1.6)
+    a.add("M26,40 C30,28 40,24 46,26 L44,34 C38,32 32,36 30,42 Z", fill="#9fc0cf", stroke=INK, width=1.6)
+    for x, y in ((33, 33), (38, 30.5), (43, 29.5)):
+        a.add(poly([(x - 2, y), (x + 2, y), (x, y + 4)]), fill=CREAM, stroke=INK, width=0.8)
+
+
+def _frenzy(a):
+    a.add(circle(24, 24, 6), fill=rad(22, 22, 7, (0, "#ff6b6b"), (1, "#a81426")), stroke=INK, width=1.4)
+    for deg in (0, 120, 240):
+        x, y = arc_pt(24, 24, 15, deg)
+        with a.group(rot=deg + 90, px=x, py=y):
+            a.add(blob([(x - 6, y + 3), (x - 1, y - 7), (x + 1, y - 7), (x + 6, y + 3)]), fill=vgrad(y - 7, y + 3, "#9fc0cf", "#46687a"), stroke=INK, width=1.4)
+    a.add(smooth(ring_points(24, 24, 20, 20, 0, 300, 9), closed=False), stroke="#6fd6e2", width=2.2, alpha=0.8)
+
+
+def _rally(a):
+    for x, y, s in ((12, 14, 0.7), (12, 34, 0.7), (22, 24, 0.9)):
+        fish_shape(a, x, y, s, "#c9d6e4")
+    a.add(circle(38, 24, 8.5), fill="#8be07a", stroke=INK, width=1.6)
+    a.line("M38,19.5 V28.5 M33.5,24 H42.5", INK, 2.6)
+
+
+def _push(a):
+    for y in (10, 22, 34):
+        fish_shape(a, 12, y, 0.7, "#c9d6e4")
+    curved_arrow(a, [(20, 22), (28, 22), (36, 22)], "#ffcf6a", 5, 5, 11)
+    fish_shape(a, 42, 36, 0.45, "#f2a064")
+
+
+def _release(a):
+    a.add("M4,44 V20 A14,14 0 0,1 32,20 V44 H26 V21 A8,8 0 0,0 10,21 V44 Z", fill=vgrad(4, 44, "#bfb3a0", "#6e6454"), stroke=INK, width=1.6)
+    fish_shape(a, 34, 30, 0.8, "#f08a5d")
+    for x in (28, 33, 38):
+        a.line(f"M{x},22 L{x - 3},14", "#b8432a", 1.6)
+
+
+def _breed(a):
+    fish_shape(a, 16, 18, 0.9, "#f08a5d")
+    fish_shape(a, 34, 34, 0.5, "#f08a5d")
+    curved_arrow(a, [(18, 28), (22, 34), (26, 36)], "#8be07a", 3, 3, 7)
+
+
+def _devour(a):
+    a.add(rrect(26, 26, 16, 16, 3), fill=vgrad(26, 42, "#ffa6ad", "#c9404d"), stroke=INK, width=1.6)
+    a.add(poly(star_points(18, 18, 7, 15, 7, -90)), fill=vgrad(3, 33, "#d7a0e0", "#8a4aa0"), stroke=INK, width=1.6)
+    a.add(circle(18, 18, 3.6), fill=INK)
+    for x, y in ((26, 28), (30, 27), (28, 32)):
+        a.add(circle(x, y, 1.1), fill=CREAM)
+
+
+def _bleach(a):
+    a.add(ellipse(24, 42, 14, 3.5), fill="#8d8173", stroke=INK, width=1.4)
+    for p, w0, w1 in (([(24, 42), (23, 30), (20, 18)], 6, 4), ([(23, 32), (32, 24), (34, 16)], 4.4, 3), ([(22, 26), (14, 20), (12, 12)], 4, 2.8)):
+        a.add(taper(p, w0, w1), fill=vgrad(10, 42, "#ffffff", "#d9d2c0"), stroke=INK, width=1.4)
+    for x, y in ((38, 8), (8, 30)):
+        a.add(poly(star_points(x, y, 4, 5, 1.8)), fill="#fff3a0", stroke=INK, width=0.8)
+    a.add(rrect(34, 30, 11, 15, 2), fill=vgrad(30, 45, "#fdf7ea", "#d9ccb0"), stroke=INK, width=1.3)
+
+
+def _cocoon(a):
+    a.add(ellipse(24, 26, 20, 16), fill=rad(20, 20, 22, (0, "#f4fffb"), (0.7, "#bfeee4"), (1, "#6fcfc0")), stroke=INK, width=1.6)
+    fish_shape(a, 22, 28, 0.75, "#5fe0cc")
+    for x, y, sz in ((33, 12, 5), (39, 6, 4)):
+        a.line(f"M{x},{y} h{sz} l{-sz},{sz} h{sz}", INK, 1.6)
+
+
+def _ride(a):
+    curved_arrow(a, [(4, 38), (16, 42), (30, 36), (44, 30)], "#6fd6e2", 5, 4.5, 11)
+    a.add(ellipse(22, 22, 11, 8.5), fill=vgrad(13, 31, "#b6e38a", "#3f7f2a"), stroke=INK, width=1.6)
+    a.add(poly([(22, 16), (27, 19), (27, 25), (22, 28), (17, 25), (17, 19)]), fill="#7cc052", stroke=INK, width=1)
+    a.add(circle(35, 20, 3.8), fill="#9fd873", stroke=INK, width=1.3)
+
+
+def _molt(a):
+    a.add(taper([(4, 36), (14, 30), (12, 20), (22, 12), (32, 16), (36, 8)], 7, 5), fill=CREAM, stroke="#3d7fb0", width=1.4)
+    a.add(taper([(10, 44), (20, 38), (18, 28), (28, 20), (38, 24), (42, 16)], 7, 5), fill="#8fd3ee", stroke=INK, width=1.8)
+    a.add(ellipse(43, 13, 5, 3.6), fill="#2a5578", stroke=INK, width=1.3)
+    a.add(circle(8, 10, 7), fill="#8be07a", stroke=INK, width=1.4)
+    a.line("M8,6 V14 M4,10 H12", INK, 2.2)
+
+
+def _clean(a):
+    fish_shape(a, 20, 30, 1.2, "#9fc0cf")
+    fish_shape(a, 34, 36, 0.5, "#c2b8a4")
+    for x, y, r in ((36, 12, 6), (26, 8, 3.5), (44, 22, 3)):
+        a.add(poly(star_points(x, y, 4, r, r * 0.35)), fill="#fff3a0", stroke=INK, width=0.9)
+
+
+def _hitch(a):
+    a.add(blob([(4, 30), (14, 22), (32, 22), (44, 28), (32, 34), (14, 34)]), fill=vgrad(22, 34, "#9fc0cf", "#46687a"), stroke=INK, width=1.6)
+    a.add(ellipse(24, 38, 10, 3.2), fill="#c2b8a4", stroke=INK, width=1.2)
+    a.add(circle(36, 12, 8.5), fill="#8be07a", stroke=INK, width=1.6)
+    a.line("M36,7.5 V16.5 M31.5,12 H40.5", INK, 2.6)
+
+
+def _swap(a):
+    for x, c in ((8, "#fdf7ea"), (28, "#fdf7ea")):
+        a.add(rrect(x, 14, 13, 19, 3), fill=vgrad(14, 33, c, "#d9ccb0"), stroke=INK, width=1.4)
+    curved_arrow(a, [(12, 12), (24, 4), (36, 11)], "#6fd6e2", 3, 3, 7)
+    curved_arrow(a, [(36, 36), (24, 44), (12, 37)], "#ff8c6b", 3, 3, 7)
+
+
+def _ink(a):
+    a.add(blob([(4, 30), (8, 18), (18, 12), (28, 16), (32, 26), (28, 38), (16, 42), (6, 38)]), fill=rad(16, 24, 18, (0, "#3c4150"), (1, "#0d1016")), stroke=INK, width=1.6)
+    for x, y, r in ((34, 36, 3), (8, 8, 2.2), (30, 8, 2)):
+        a.add(circle(x, y, r), fill="#1c2229")
+    curved_arrow(a, [(26, 24), (34, 20), (40, 14), (45, 8)], "#e06a7b", 4, 3.6, 9)
+
+
+def _hatch(a):
+    a.add("M10,26 C10,12 18,6 24,6 C30,6 38,12 38,26 L33,22 L28,27 L23,22 L18,27 L14,22 Z", fill=rad(20, 12, 18, (0, "#ffffff"), (1, "#d6ceb8")), stroke=INK, width=1.4)
+    a.add("M10,30 L14,26 L18,31 L23,26 L28,31 L33,26 L38,30 C38,40 32,44 24,44 C16,44 10,40 10,30 Z", fill=rad(20, 32, 18, (0, "#ffffff"), (1, "#d6ceb8")), stroke=INK, width=1.4)
+    a.add(ellipse(24, 29, 8, 4.5), fill="#c49ae0", stroke=INK, width=1.2)
+    a.add(circle(21, 28.5, 1.2), fill=INK)
+
+
+def _hypnotize(a):
+    pts = []
+    for i in range(60):
+        t = i / 59
+        ang = t * 3.2 * 360
+        r = 2 + 18 * t
+        pts.append(arc_pt(24, 24, r, ang))
+    a.add(smooth(pts, closed=False), stroke="#d4577f", width=3)
+    a.add(smooth(pts, closed=False), stroke=INK, width=1)
+
+
+def _pulse(a):
+    a.add(smooth(ring_points(24, 22, 12, 11, 180, 360, 7) + [(35, 23), (29, 25), (24, 23), (19, 25), (13, 23)]), fill=vgrad(10, 25, "#e6d0ff", "#8656b4"), stroke=INK, width=1.6)
+    for x in (16, 22, 28, 34):
+        a.add(taper([(x, 24), (x - 1, 30), (x + 1, 36)], 2, 0.8), fill="#c6a2ee")
+    for r in (17, 21):
+        a.add(smooth(ring_points(24, 22, r, r, 200, 340, 7), closed=False), stroke="#ffcf6a", width=2)
+
+
 def _dawn(a):
     a.add("M4,34 A20,20 0 0,1 44,34 Z", fill=rad(24, 34, 20, (0, "#fff6c0"), (1, "#ffb347")), stroke=INK, width=1.8)
     for deg in (190, 220, 250, 290, 320, 350):
@@ -574,6 +744,9 @@ ICONS = {
     "price": _price, "lure": _lure, "steal": _steal, "recoil": _recoil, "order": _order, "reach": _reach, "grab": _grab,
     "mantle": _mantle, "paint": _paint, "dig": _dig, "leave": _leave, "sandbar": _sandbar, "island": _island,
     "slither": _slither, "setup": _setup, "nest": _nest, "market": _market, "recruit": _recruit, "dawn": _dawn, "day": _day,
+    "feedblood": _feedblood, "frenzy": _frenzy, "rally": _rally, "push": _push, "release": _release, "breed": _breed,
+    "devour": _devour, "bleach": _bleach, "cocoon": _cocoon, "ride": _ride, "molt": _molt, "clean": _clean, "hitch": _hitch,
+    "swap": _swap, "ink": _ink, "hatch": _hatch, "hypnotize": _hypnotize, "pulse": _pulse,
 }
 
 
@@ -665,7 +838,7 @@ DECOS = [deco_kelp, deco_sponge, deco_pearl, deco_rock, deco_wreck, deco_driftwo
 SUITS = [suit_kelp, suit_sponge, suit_pearl, suit_moon]
 PIECES = [piece_coral, piece_market, piece_nest, piece_egg, piece_blood, piece_rubble, lure_treasure, lure_shelter, lure_glory,
           lambda: pigment("pigment_kelp", SUIT["kelp"]), lambda: pigment("pigment_sponge", SUIT["sponge"]),
-          lambda: pigment("pigment_pearl", SUIT["pearl"]), piece_shell, piece_island, piece_sandbar]
+          lambda: pigment("pigment_pearl", SUIT["pearl"]), piece_shell, piece_island, piece_sandbar, lure_dark, piece_cyst, piece_cocoon]
 
 
 def all_art():

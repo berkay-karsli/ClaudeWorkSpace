@@ -250,6 +250,10 @@ class FactionRulesTest {
         val t = g.player(FactionId.TURTLES)
         val s = g.players[t].fs as TurtlesState
         val turtle = s.turtles.first()
+        // No enemy on the beach, so every hatchling makes it to the sea.
+        val sharksHere = g.reefs[turtle.reef].warriors(FactionId.SHARKS)
+        g.reefs[turtle.reef].addWarriors(FactionId.SHARKS, -sharksHere)
+        g.reefs[Board.neighbors(turtle.reef).first()].addWarriors(FactionId.SHARKS, sharksHere)
         turtle.food += Suit.KELP
         turtle.food += Suit.PEARL
         TurtlesRules.applyDay(g, t, Lay(turtle.id, turtle.reef, 3))

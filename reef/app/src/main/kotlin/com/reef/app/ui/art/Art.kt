@@ -42,6 +42,7 @@ object Art {
     fun lure(offer: String?): ImageVector = when (offer) {
         AnglersRules.TREASURE -> Tokens.lureTreasure
         AnglersRules.SHELTER -> Tokens.lureShelter
+        AnglersRules.DARK -> Tokens.lureDark
         else -> Tokens.lureGlory
     }
 
@@ -54,6 +55,8 @@ object Art {
         PieceType.EGG -> Tokens.egg
         PieceType.LURE -> lure(p.variant)
         PieceType.PIGMENT -> pigment(p.suit ?: Suit.PEARL)
+        PieceType.CYST -> Tokens.cyst
+        PieceType.COCOON -> Tokens.cocoon
     }
 
     /** The icon for an option's kind (the words on its action card). */
@@ -74,7 +77,23 @@ object Art {
         "Hunt" -> Icons.hunt
         "Grow" -> Icons.grow
         "Spawn", "Bloom" -> Icons.spawn
-        "Add fish", "Recruit" -> Icons.recruit
+        "Recruit" -> Icons.recruit
+        "Eat Blood" -> Icons.feedblood
+        "Frenzy" -> Icons.frenzy
+        "Rally" -> Icons.rally
+        "Push" -> Icons.push
+        "Release" -> Icons.release
+        "Breed" -> Icons.breed
+        "Devour" -> Icons.devour
+        "Bleach" -> Icons.bleach
+        "Cocoon" -> Icons.cocoon
+        "Molt" -> Icons.molt
+        "Clean" -> Icons.clean
+        "Hitch" -> Icons.hitch
+        "Swap" -> Icons.swap
+        "Ink" -> Icons.ink
+        "Hatch" -> Icons.hatch
+        "Hypnotize" -> Icons.hypnotize
         "Leave" -> Icons.leave
         "Bait ball" -> Icons.baitball
         "Gorge" -> Icons.gorge

@@ -9,7 +9,12 @@ import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Density
 import com.reef.engine.Bot
+import com.reef.engine.Bleach
 import com.reef.engine.FactionId
+import com.reef.engine.FeedBlood
+import com.reef.engine.InkCloud
+import com.reef.engine.Option
+import com.reef.engine.Push
 import com.reef.engine.Game
 import com.reef.engine.GameState
 import com.reef.engine.OptionPicker
@@ -124,8 +129,8 @@ fun main(args: Array<String>) {
     shot(out, "00-home") { HomeScreen(saved = saved, onContinue = {}, onNew = {}, onHowToPlay = {}) }
     shot(out, "01-setup") { SetupScreen(onStart = {}, onBack = {}, initial = lineups[1]) }
     shot(out, "02-setup-low-reach") { SetupScreen(onStart = {}, onBack = {}, initial = listOf(FactionId.TURTLES, FactionId.CORAL)) }
-    for ((i, f) in listOf(FactionId.SHARKS, FactionId.OCTOPUS, FactionId.CRABS, FactionId.CUTTLEFISH).withIndex()) {
-        shot(out, "03-board-${i + 1}-${f.key}") { RulesDialog(listOf(f)) {} }
+    for ((i, f) in FactionId.entries.withIndex()) {
+        shot(out, "03-board-%02d-${f.key}".format(i + 1)) { RulesDialog(listOf(f)) {} }
     }
 
     var n = 10
@@ -156,6 +161,17 @@ fun main(args: Array<String>) {
     if (over != null) shot(out, "42-game-over") { GameScreen(GameController(over, MemoryStore), {}, {}) }
 
     shot(out, "43-shared-rules") { RulesDialog(emptyList()) {} }
+
+    // New choices in draft 4, each as the player sees it.
+    fun offered(g: GameState, test: (Option) -> Boolean) = g.phase != Phase.OVER && Game.decision(g)!!.options.any(test)
+    fun choiceShot(name: String, lineup: List<FactionId>, seed: Long, test: (Option) -> Boolean) {
+        val g = playUntil(lineup, seed) { offered(it, test) } ?: return
+        shot(out, name) { GameScreen(controllerFor(g, g.players[Game.decision(g)!!.player].faction), {}, {}) }
+    }
+    choiceShot("45-sharks-feed-or-frenzy", lineups[0], 80) { it is FeedBlood }
+    choiceShot("46-octopus-ink", lineups[3], 81) { it is InkCloud }
+    choiceShot("47-sardines-wall-of-fish", lineups[3], 82) { it is Push }
+    choiceShot("48-coral-bleach", lineups[0], 83) { it is Bleach }
 
     // Scores change during play: moves made on a live screen must show up in the scoreboard.
     val live = playUntil(lineups[0], 70) { it.round >= 2 && it.phase == Phase.DAWN } ?: return

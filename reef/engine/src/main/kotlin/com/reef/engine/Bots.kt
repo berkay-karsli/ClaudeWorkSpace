@@ -26,8 +26,9 @@ class Bot(private val random: Random = Random.Default, private val samples: Int 
                 endDay(copy, d.player)
                 total += evaluate(copy, d.player)
             }
-            // A little noise breaks ties, so bots don't always make the same opening.
-            val value = total / tries + random.nextDouble() * 0.01
+            // A little noise breaks ties, so bots don't always make the same opening. Swapping
+            // orders must actually help, or dozens of equal swaps would crowd out doing nothing.
+            val value = total / tries + random.nextDouble() * 0.01 - (if (o is Rewire) 0.05 else 0.0)
             if (value > bestValue) {
                 best = o
                 bestValue = value
@@ -73,7 +74,29 @@ class Bot(private val random: Random = Random.Default, private val samples: Int 
         val p = d.player
         val ready = d.options.filterIsInstance<PlayDominance>().firstOrNull { safeDominance(g, p, it.cardId) }
         if (ready != null && g.players[p].vp <= 18) return listOf(ready)
-        return d.options.filter { it !is PlayDominance }
+        return cheapestCards(d.options.filter { it !is PlayDominance })
+    }
+
+    /**
+     * When a card is only paid (discarded, tucked under an arm, put in the Till), any card of the
+     * same suit does the same thing: keep only the option that pays with the least useful one.
+     */
+    private fun cheapestCards(options: List<Option>): List<Option> {
+        val best = linkedMapOf<List<Any?>, Option>()
+        for (o in options) {
+            val c = o.card
+            val key: List<Any?> = if (c == null || o is Craft) listOf(o) else listOf(o::class, o.kind, o.reefs, o.target, o.variant, o.count, Cards[c].suit)
+            val old = best[key]
+            if (old == null || keep(o.card!!) < keep(old.card!!)) best[key] = o
+        }
+        return best.values.toList()
+    }
+
+    /** How much a card is worth keeping in hand. */
+    private fun keep(card: Int): Int {
+        val c = Cards[card]
+        return c.vp + (if (c.kind == CardKind.AMBUSH) 3 else 0) + (if (c.kind == CardKind.DOMINANCE) 1 else 0) +
+            (if (c.effect != GearEffect.NONE) 1 else 0) + (if (c.suit == Suit.MOON) 2 else 0)
     }
 
     private fun safeDominance(g: GameState, p: Int, card: Int): Boolean {

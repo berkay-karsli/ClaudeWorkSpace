@@ -44,9 +44,10 @@ class RulesTest {
             val plate = Plates.of(f)
             assertEquals(f.display, plate.name)
             assertEquals(3, plate.rules.size)
-            val verbs = plate.verbs
-            assertEquals("${f.display}: only buildings craft", verbs["Build"], verbs["Craft"])
-            assertEquals("${f.display}: craft rule", verbs["Craft"], Game.rules(f).canCraft)
+            assertEquals("${f.display}: every faction moves, battles, recruits and crafts its own way", setOf("Move", "Battle", "Recruit", "Craft"), plate.ways.keys)
+            assertTrue("${f.display}: a quirk", plate.quirk.text.isNotBlank())
+            assertTrue("${f.display}: crafting pieces", plate.craft.isNotBlank())
+            assertTrue("${f.display}: a choice", plate.choice.isNotBlank())
         }
         assertTrue(Plates.shared.isNotEmpty())
     }
@@ -85,7 +86,7 @@ class RulesTest {
         assertEquals(0, g.reefs[0].warriors(sharks))
         assertEquals(0, g.reefs[3].warriors(sharks))
         assertEquals(2, g.reefs[1].warriors(sharks))
-        assertEquals(8, g.sharkState().supply)
+        assertEquals(12 - 2, g.sharkState().supply)
     }
 
     @Test
@@ -100,6 +101,9 @@ class RulesTest {
         assertTrue("an attack that removes a warrior leaves Blood", g.reefs[4].has(PieceType.BLOOD))
         val vpBefore = g.players[g.player(sharks)].vp
         Game.apply(g, EndDay)
+        // At Dusk the sharks choose: feed on the Blood, or frenzy.
+        assertEquals(listOf(FeedBlood(4), Frenzy(4, SharksRules.FRENZY)), Game.decision(g)!!.options)
+        Game.apply(g, FeedBlood(4))
         assertEquals(vpBefore + SharksRules.BLOOD_VP, g.players[g.player(sharks)].vp)
         assertFalse(g.reefs[4].has(PieceType.BLOOD))
         assertEquals(GameState.BLOOD_TOKENS, g.blood)
@@ -149,8 +153,8 @@ class RulesTest {
     }
 
     @Test
-    fun coralScoresOneOneOneTwoTwoTwo() {
-        assertEquals(listOf(1, 1, 1, 2, 2, 2, 3), (3..9).map { CoralRules.growVp(it) })
+    fun coralScoresOneForEveryFourCoral() {
+        assertEquals(listOf(1, 1, 1, 1, 1, 2, 2, 2, 2, 3), (3..12).map { CoralRules.growVp(it) })
     }
 
     @Test

@@ -7,6 +7,10 @@ object SardinesRules : FactionRules {
     override val setupHint = "place 5 sardines at any gate."
     const val SETUP = 5
     const val RUN = 3
+    const val RALLY = 2
+    const val WALL = 6
+    const val MOB = 6
+    const val CRAFT_SCHOOL = 4
 
     override fun warriorNoun(n: Int) = if (n == 1) "sardine" else "sardines"
     override fun newState(): FactionState = SardinesState()
@@ -21,10 +25,7 @@ object SardinesRules : FactionRules {
         else -> 0
     }
 
-    override fun dawnHint(g: GameState, p: Int): String {
-        val gate = st(g, p).runGate ?: return "$RUN sardines arrive at a gate you choose."
-        return "discard ${g.suitOf(gate).label} cards (or Moon) for 1 more sardine each."
-    }
+    override fun dawnHint(g: GameState, p: Int) = "$RUN sardines arrive at a gate you choose."
 
     override fun duskHint(g: GameState, p: Int) = "schools on a gate they didn't come in by may leave and score."
 
@@ -43,13 +44,13 @@ object SardinesRules : FactionRules {
         s.runGate = null
         s.runDone = s.supply == 0
         s.exitDone = false
+        s.pushAt = null
     }
 
     override fun dawnOptions(g: GameState, p: Int): List<Option> {
         val s = st(g, p)
         if (s.runDone) return emptyList()
-        val gate = s.runGate ?: return Board.gates.map { RunGate(it) }
-        return Game.cardsOfSuit(g, p, g.suitOf(gate)).map<Int, Option> { RunCard(it) } + Done("Start the Day")
+        return Board.gates.map { RunGate(it) }
     }
 
     override fun applyDawn(g: GameState, p: Int, o: Option) {
@@ -57,17 +58,12 @@ object SardinesRules : FactionRules {
         when (o) {
             is RunGate -> {
                 s.runGate = o.gate
+                s.runDone = true
                 val n = place(g, p, o.gate, o.gate, RUN)
                 Game.log(g, "Sardines: the run arrives, $n sardines at ${Board.name(o.gate)}.")
             }
-            is RunCard -> {
-                Game.discardFromHand(g, p, o.cardId)
-                place(g, p, s.runGate!!, s.runGate!!, 1)
-                Game.log(g, "Sardines: discard ${Cards[o.cardId].name}, 1 more sardine joins the run.")
-            }
-            else -> s.runDone = true
+            else -> error("Sardines can't ${o.describe()} at Dawn")
         }
-        if (s.supply == 0) s.runDone = true
     }
 
     /** A move takes the whole school up to two channels, ignoring rule. */
@@ -79,15 +75,61 @@ object SardinesRules : FactionRules {
             val one = Game.neighbors(g, from, id)
             val reach = (one + one.flatMap { Game.neighbors(g, it, id) }).toSet() - from
             for (to in reach.sorted()) out += Move(from, to, n)
+            if (n >= MOB) out += Game.battleTargets(g, p, from).map { Battle(from, it) }
+        }
+        if (st(g, p).supply > 0) {
+            for (c in g.players[p].hand) for (reef in g.reefs.indices) {
+                if (g.reefs[reef].warriors(id) > 0 && (Cards[c].suit == Suit.MOON || g.suitOf(reef) == Cards[c].suit)) out += Rally(c, reef)
+            }
         }
         return out
     }
 
-    override fun applyDay(g: GameState, p: Int, o: Option) {
-        val m = o as Move
-        Game.log(g, "Sardines: a school of ${m.n} swims from ${Board.name(m.from)} to ${Board.name(m.to)}.")
-        Game.moveWarriors(g, p, m.from, m.to, m.n)
+    /** Right after a school of 6 or more arrives, it may push a faction with fewer warriors there. */
+    override fun freeDayOptions(g: GameState, p: Int): List<Option> {
+        val reef = st(g, p).pushAt ?: return emptyList()
+        val mine = g.reefs[reef].warriors(id)
+        if (mine < WALL) return emptyList()
+        return Game.pushTargets(g, p, reef).filter { (q, _) ->
+            val f = g.players[q].faction
+            g.reefs[reef].warriors(f) * Game.rules(f).hitWeight < mine
+        }.flatMap { (q, dests) -> dests.map { Push(reef, g.players[q].faction, it) } }
     }
+
+    /** A mob deals at most 1 hit for every 3 fish. */
+    override fun attackCap(g: GameState, p: Int, reef: Int) = g.reefs[reef].warriors(id) / 3
+
+    override fun applyDay(g: GameState, p: Int, o: Option) {
+        val s = st(g, p)
+        s.pushAt = null
+        when (o) {
+            is Move -> {
+                Game.log(g, "Sardines: a school of ${o.n} swims from ${Board.name(o.from)} to ${Board.name(o.to)}.")
+                Game.moveWarriors(g, p, o.from, o.to, o.n)
+                if (g.reefs[o.to].warriors(id) >= WALL) s.pushAt = o.to
+            }
+            is Battle -> {
+                Game.log(g, "Sardines: the school of ${g.reefs[o.reef].warriors(id)} mobs.")
+                Game.startBattle(g, p, o.reef, o.defender)
+            }
+            is Rally -> {
+                Game.discardFromHand(g, p, o.cardId)
+                val here = s.origins[o.reef].orEmpty()
+                val gate = here.maxByOrNull { it.value }?.key ?: o.reef
+                val n = place(g, p, o.reef, gate, RALLY)
+                Game.log(g, "Sardines: $n more sardines rally to the school in ${Board.name(o.reef)}.")
+            }
+            is Push -> Game.push(g, p, g.player(o.victim), o.reef, o.to, g.reefs[o.reef].warriors(o.victim))
+            else -> error("Sardines can't ${o.describe()}")
+        }
+    }
+
+    override fun onDuskStart(g: GameState, p: Int) {
+        st(g, p).pushAt = null
+    }
+
+    /** Each reef with 4 or more sardines pays its suit. */
+    override fun craftUnits(g: GameState, p: Int) = reefUnits(g, g.reefs.indices.filter { g.reefs[it].warriors(id) >= CRAFT_SCHOOL })
 
     override fun onMoved(g: GameState, p: Int, from: Int, to: Int, n: Int) {
         val s = st(g, p)

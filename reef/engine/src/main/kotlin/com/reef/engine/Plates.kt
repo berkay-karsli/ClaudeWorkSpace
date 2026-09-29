@@ -26,7 +26,14 @@ object Plates {
         val setup: String,
         val turn: List<TurnStep>,
         val scores: List<String>,
-        val verbs: Map<String, Boolean>,
+        /** How the faction moves, battles, recruits and crafts, each in a few words. */
+        val ways: Map<String, String>,
+        /** The choice its player faces every turn. */
+        val choice: String,
+        /** A rule taken from the real animal. */
+        val quirk: Titled,
+        /** The pieces it crafts with. */
+        val craft: String,
         val complexity: Int,
         val reach: Int,
     )

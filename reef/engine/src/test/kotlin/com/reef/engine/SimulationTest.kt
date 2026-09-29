@@ -26,10 +26,10 @@ class SimulationTest {
                 val f = p.faction
                 val warriors = g.reefs.sumOf { it.warriors(f) }
                 when (val s = p.fs) {
-                    is SharksState -> assertEquals("sharks", 10, s.supply + warriors)
+                    is SharksState -> assertEquals("sharks", 12, s.supply + warriors)
                     is CoralState -> {
                         assertEquals("polyps", 20, s.polyps + warriors)
-                        assertEquals("coral", 15, s.coral + onMap(f, PieceType.CORAL))
+                        assertEquals("coral", 15, s.coral + onMap(f, PieceType.CORAL) + s.bleached)
                     }
                     is SardinesState -> {
                         assertEquals("sardines", 30, s.supply + warriors)
@@ -43,10 +43,13 @@ class SimulationTest {
                     is JellyfishState -> {
                         assertEquals("jellyfish", 24, s.supply + warriors)
                         assertEquals("current arrows", 4, s.arrows + g.markers.count { it.type == MarkerType.CURRENT })
+                        assertEquals("cysts", 4, s.cysts + onMap(f, PieceType.CYST) + inGarden(f, PieceType.CYST))
                     }
                     is ParrotfishState -> {
                         assertEquals("parrotfish", 16, s.supply + warriors)
                         assertEquals("sandbars", 8, s.sandbars + g.markers.count { it.type == MarkerType.SANDBAR })
+                        assertEquals("cocoon", 1, s.cocoon + onMap(f, PieceType.COCOON) + inGarden(f, PieceType.COCOON))
+                        assertTrue("Sand", s.sand >= 0)
                     }
                     is TurtlesState -> {
                         assertEquals("turtles on the map", s.turtles.size, warriors)
@@ -64,14 +67,14 @@ class SimulationTest {
                         }
                     }
                     is RemorasState -> {
-                        assertEquals("remoras", 10, s.supply + warriors + RemorasRules.attachedTotal(s))
+                        assertEquals("remoras", 8, s.supply + warriors + RemorasRules.attachedTotal(s))
                         for ((reef, m) in s.attached) for ((host, n) in m) {
                             assertTrue("remoras ride nothing in ${Board.name(reef)}", n > 0 && g.reefs[reef].warriors(host) > 0 || g.pending.isNotEmpty())
                         }
                     }
                     is CrabsState -> {
                         assertEquals("crabs", 12, s.supply + warriors)
-                        assertEquals("markets", 4, s.markets + onMap(f, PieceType.MARKET))
+                        assertEquals("markets", 5, s.markets + onMap(f, PieceType.MARKET))
                         assertEquals("shells", CrabsRules.SHELLS, s.pool + s.shells.values.sumOf { it.values.sum() })
                     }
                     is AnglersState -> {
@@ -115,13 +118,15 @@ class SimulationTest {
             return out
         }
 
-        fun play(seed: Long, factions: List<FactionId>, maxRounds: Int = 45): GameState {
+        fun play(seed: Long, factions: List<FactionId>, maxRounds: Int = 45, chosen: (FactionId, Option) -> Unit = { _, _ -> }): GameState {
             val g = Game.newGame(factions.map { Seat(it, false) }, seed)
             val bot = Bot(Random(seed), samples = 2)
             var steps = 0
             while (g.phase != Phase.OVER) {
                 val d = Game.decision(g)!!
-                Game.apply(g, bot.choose(g, d))
+                val o = bot.choose(g, d)
+                chosen(g.players[d.player].faction, o)
+                Game.apply(g, o)
                 checkInvariants(g)
                 steps++
                 if (g.round > maxRounds || steps >= 12000) {
@@ -144,10 +149,13 @@ class SimulationTest {
         val rounds = mutableListOf<Int>()
         val vpSources = mutableMapOf<String, Int>()
         val rates = mutableMapOf<FactionId, MutableList<Double>>()
+        val used = mutableMapOf<FactionId, MutableMap<String, Int>>()
         val start = System.currentTimeMillis()
         for ((i, lineup) in lineups(games, 7).withIndex()) {
             val seed = 2000L + i
-            val g = play(seed, lineup)
+            val g = play(seed, lineup) { f, o ->
+                if (o !is Discard && o !is PlaceSetup) used.getOrPut(f) { mutableMapOf() }.merge(o.kind, 1, Int::plus)
+            }
             val w = g.players[g.winner!!].faction
             wins[w] = (wins[w] ?: 0) + 1
             for (f in lineup) played[f] = (played[f] ?: 0) + 1
@@ -164,6 +172,7 @@ class SimulationTest {
         for (f in FactionId.entries) {
             val r = rates[f].orEmpty()
             println("  ${f.display}: won ${wins[f] ?: 0} of ${played[f] ?: 0}, VP per round %.2f".format(r.average()))
+            println("      chose: " + used[f].orEmpty().entries.sortedByDescending { it.value }.joinToString { "${it.key} ${it.value}" })
         }
         println("VP by source: " + vpSources.entries.sortedByDescending { it.value }.joinToString { "${it.key} ${it.value}" })
         for (f in FactionId.entries) assertTrue("${f.display} never played", (played[f] ?: 0) > 0)
