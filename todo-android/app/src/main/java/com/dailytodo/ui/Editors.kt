@@ -92,7 +92,7 @@ fun RoutineEditor(
     var emoji by rememberSaveable { mutableStateOf(initial?.emoji ?: emojis.first()) }
     var note by rememberSaveable { mutableStateOf(initial?.note ?: "") }
     // Empty = every day. Stored as day numbers so it survives rotation.
-    var dayNumbers by rememberSaveable { mutableStateOf(initial?.days?.map { it.value } ?: emptyList()) }
+    var dayNumbers by rememberSaveable { mutableStateOf<List<Int>>(initial?.days?.map { it.value } ?: emptyList()) }
     val days = dayNumbers.map { DayOfWeek.of(it) }.toSet()
 
     ModalBottomSheet(
