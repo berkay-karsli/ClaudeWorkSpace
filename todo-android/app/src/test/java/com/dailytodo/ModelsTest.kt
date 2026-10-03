@@ -10,6 +10,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.DayOfWeek
 import java.time.LocalDate
 
 class ModelsTest {
@@ -83,5 +84,42 @@ class ModelsTest {
             events = listOf(PlannedEvent(7, Space.UNIVERSITY, "Lab \"report\"", "Room 4", listOf(1L, 2L), done = true)),
         )
         assertEquals(data, TodoJson.decode(TodoJson.encode(data)))
+    }
+
+    @Test
+    fun weekdayRoutineIsOnlyDueOnItsDays() {
+        // 2026-09-29 is a Tuesday.
+        val r = routine.copy(days = setOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY))
+        assertFalse(r.isScheduledOn(today))
+        assertTrue(r.isScheduledOn(today.plusDays(1)))
+        assertTrue(routine.isScheduledOn(today))
+        val data = TodoData(routines = listOf(routine, r))
+        assertEquals(listOf(routine), data.routinesDueOn(Space.HOME, today))
+    }
+
+    @Test
+    fun streakSkipsDaysTheRoutineIsNotDue() {
+        // Mon/Wed/Fri routine, done on the last three of those days.
+        val r = routine.copy(days = setOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY))
+            .toggledOn(LocalDate.of(2026, 9, 23)) // Wed
+            .toggledOn(LocalDate.of(2026, 9, 25)) // Fri
+            .toggledOn(LocalDate.of(2026, 9, 28)) // Mon
+        assertEquals(3, r.streak(today)) // Tuesday: not due, streak holds
+        assertEquals(3, r.streak(today.plusDays(1))) // Wednesday, not ticked yet
+        assertEquals(0, r.streak(today.plusDays(2))) // Thursday: Wednesday was missed
+    }
+
+    @Test
+    fun jsonKeepsNotesAndDays() {
+        val r = routine.copy(note = "Fresh sheets on Sunday\nline two", days = setOf(DayOfWeek.SUNDAY, DayOfWeek.MONDAY))
+        assertEquals(TodoData(listOf(r)), TodoJson.decode(TodoJson.encode(TodoData(listOf(r)))))
+    }
+
+    @Test
+    fun oldSavesWithoutNotesOrDaysStillLoad() {
+        val old = """{"routines":[{"id":1,"space":"HOME","title":"Bed","emoji":"🛏️","doneDates":[]}],"events":[]}"""
+        val r = TodoJson.decode(old).routines.single()
+        assertEquals("", r.note)
+        assertTrue(r.isEveryDay)
     }
 }

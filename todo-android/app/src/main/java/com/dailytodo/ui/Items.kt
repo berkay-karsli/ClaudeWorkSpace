@@ -29,6 +29,7 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.NotificationsNone
+import androidx.compose.material.icons.automirrored.rounded.Notes
 import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -70,6 +71,8 @@ fun RoutineItem(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
+    /** False for routines listed under "other days": they can be edited but not ticked today. */
+    scheduledToday: Boolean = true,
 ) {
     val haptics = LocalHapticFeedback.current
     val toggle by rememberUpdatedState(onToggle)
@@ -95,6 +98,7 @@ fun RoutineItem(
     SwipeToDismissBox(
         state = state,
         modifier = modifier.clip(CardShape),
+        enableDismissFromStartToEnd = scheduledToday,
         backgroundContent = {
             val direction = state.dismissDirection
             val colors = MaterialTheme.colorScheme
@@ -111,7 +115,7 @@ fun RoutineItem(
             }
         },
     ) {
-        RoutineCard(routine, done, streak, onToggle = {
+        RoutineCard(routine, done, streak, scheduledToday, onToggle = {
             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
             onToggle()
         }, onEdit = onEdit)
@@ -119,10 +123,18 @@ fun RoutineItem(
 }
 
 @Composable
-private fun RoutineCard(routine: Routine, done: Boolean, streak: Int, onToggle: () -> Unit, onEdit: () -> Unit) {
+private fun RoutineCard(
+    routine: Routine,
+    done: Boolean,
+    streak: Int,
+    scheduledToday: Boolean,
+    onToggle: () -> Unit,
+    onEdit: () -> Unit,
+) {
     val colors = MaterialTheme.colorScheme
-    val container by animateColorAsState(if (done) colors.surfaceContainer else colors.surface, label = "container")
-    val contentAlpha by animateFloatAsState(if (done) 0.55f else 1f, label = "alpha")
+    val dimmed = done || !scheduledToday
+    val container by animateColorAsState(if (dimmed) colors.surfaceContainer else colors.surface, label = "container")
+    val contentAlpha by animateFloatAsState(if (dimmed) 0.55f else 1f, label = "alpha")
 
     Surface(
         onClick = onEdit,
@@ -149,16 +161,13 @@ private fun RoutineCard(routine: Routine, done: Boolean, streak: Int, onToggle: 
                     .weight(1f)
                     .alpha(contentAlpha),
             ) {
-                Text(
-                    routine.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    textDecoration = if (done) TextDecoration.LineThrough else null,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                TitleWithNoteHint(routine.title, hasNote = routine.note.isNotBlank(), strike = done)
                 Text(
                     when {
-                        streak >= 2 -> "🔥 $streak-day streak"
+                        !scheduledToday -> scheduleLabel(routine.days)
+                        streak >= 2 && routine.isEveryDay -> "🔥 $streak-day streak"
+                        streak >= 2 -> "🔥 $streak in a row · ${scheduleLabel(routine.days)}"
+                        !routine.isEveryDay -> scheduleLabel(routine.days)
                         done -> "Done for today"
                         else -> "Swipe right when done"
                     },
@@ -166,8 +175,34 @@ private fun RoutineCard(routine: Routine, done: Boolean, streak: Int, onToggle: 
                     color = colors.onSurfaceVariant,
                 )
             }
-            Spacer(Modifier.width(8.dp))
-            CheckCircle(checked = done, onClick = onToggle)
+            if (scheduledToday) {
+                Spacer(Modifier.width(8.dp))
+                CheckCircle(checked = done, onClick = onToggle)
+            }
+        }
+    }
+}
+
+/** The card shows only the name; a small icon hints that notes are inside. */
+@Composable
+private fun TitleWithNoteHint(title: String, hasNote: Boolean, strike: Boolean) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            title,
+            style = MaterialTheme.typography.titleMedium,
+            textDecoration = if (strike) TextDecoration.LineThrough else null,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
+        )
+        if (hasNote) {
+            Spacer(Modifier.width(6.dp))
+            Icon(
+                Icons.AutoMirrored.Rounded.Notes,
+                contentDescription = "Has notes",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(16.dp),
+            )
         }
     }
 }
@@ -291,22 +326,7 @@ private fun EventCard(event: PlannedEvent, today: LocalDate, now: Long, onToggle
                     .weight(1f)
                     .alpha(contentAlpha),
             ) {
-                Text(
-                    event.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    textDecoration = if (event.done) TextDecoration.LineThrough else null,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                if (event.note.isNotBlank()) {
-                    Text(
-                        event.note,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colors.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
+                TitleWithNoteHint(event.title, hasNote = event.note.isNotBlank(), strike = event.done)
                 Spacer(Modifier.height(8.dp))
                 when {
                     event.done -> MiniLabel("Completed ✓", colors.tertiaryContainer, colors.onTertiaryContainer)

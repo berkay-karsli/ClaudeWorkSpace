@@ -1,12 +1,15 @@
 package com.dailytodo.ui
 
+import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import java.time.format.TextStyle
 import java.time.temporal.ChronoUnit
+import java.util.Locale
 
 private val zone: ZoneId get() = ZoneId.systemDefault()
 private val timeFormat: DateTimeFormatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
@@ -54,3 +57,20 @@ fun greeting(hour: Int): String = when (hour) {
 }
 
 val headerDateFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("EEEE, d MMMM")
+
+private val weekdays = setOf(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY)
+
+/** Monday-first week, in the phone's language. */
+val weekOrder: List<DayOfWeek> = DayOfWeek.values().toList()
+
+fun DayOfWeek.shortName(): String = getDisplayName(TextStyle.SHORT, Locale.getDefault())
+
+fun DayOfWeek.letter(): String = getDisplayName(TextStyle.NARROW, Locale.getDefault())
+
+/** "Every day", "Weekdays", "Weekends" or e.g. "Mon · Wed · Fri". */
+fun scheduleLabel(days: Set<DayOfWeek>): String = when {
+    days.isEmpty() || days.size == 7 -> "Every day"
+    days == weekdays -> "Weekdays"
+    days == setOf(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY) -> "Weekends"
+    else -> weekOrder.filter { it in days }.joinToString(" · ") { it.shortName() }
+}

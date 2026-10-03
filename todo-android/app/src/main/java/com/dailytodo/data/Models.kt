@@ -1,17 +1,27 @@
 package com.dailytodo.data
 
+import java.time.DayOfWeek
 import java.time.LocalDate
 
 enum class Space { HOME, UNIVERSITY }
 
-/** A task that comes back every day. It is "done" only for the days listed in [doneDates]. */
+/**
+ * A task that comes back on its scheduled weekdays ([days]; empty means every day).
+ * It is "done" only for the dates listed in [doneDates].
+ */
 data class Routine(
     val id: Long,
     val space: Space,
     val title: String,
     val emoji: String,
     val doneDates: Set<String> = emptySet(),
+    val note: String = "",
+    val days: Set<DayOfWeek> = emptySet(),
 ) {
+    val isEveryDay: Boolean get() = days.isEmpty() || days.size == 7
+
+    fun isScheduledOn(date: LocalDate): Boolean = isEveryDay || date.dayOfWeek in days
+
     fun isDoneOn(date: LocalDate): Boolean = date.toString() in doneDates
 
     fun toggledOn(date: LocalDate): Routine {
@@ -22,12 +32,18 @@ data class Routine(
         return copy(doneDates = dates.filter { it >= cutoff }.toSet())
     }
 
-    /** Consecutive days done, ending today (or yesterday, if today isn't done yet). */
+    /**
+     * Scheduled days done in a row, ending today (or the previous scheduled day, if today isn't
+     * done yet). Days the routine isn't scheduled on don't break the streak.
+     */
     fun streak(today: LocalDate): Int {
-        var day = if (isDoneOn(today)) today else today.minusDays(1)
+        var day = if (isScheduledOn(today) && !isDoneOn(today)) today.minusDays(1) else today
         var count = 0
-        while (isDoneOn(day)) {
-            count++
+        repeat(HISTORY_DAYS.toInt()) {
+            if (isScheduledOn(day)) {
+                if (!isDoneOn(day)) return count
+                count++
+            }
             day = day.minusDays(1)
         }
         return count
@@ -62,6 +78,8 @@ data class TodoData(
     val events: List<PlannedEvent> = emptyList(),
 ) {
     fun routinesIn(space: Space) = routines.filter { it.space == space }
+
+    fun routinesDueOn(space: Space, date: LocalDate) = routinesIn(space).filter { it.isScheduledOn(date) }
 
     /** Upcoming events first (soonest on top), then undated, then past/done ones (newest on top). */
     fun eventsIn(space: Space, now: Long): List<PlannedEvent> {

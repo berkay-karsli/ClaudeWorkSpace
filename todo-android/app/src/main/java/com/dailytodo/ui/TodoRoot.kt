@@ -68,7 +68,7 @@ fun TodoRoot(viewModel: TodoViewModel, space: Space, onSpaceChange: (Space) -> U
             bottomBar = {
                 NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
                     Space.entries.forEach { s ->
-                        val remaining = data.routinesIn(s).count { !it.isDoneOn(today) }
+                        val remaining = data.routinesDueOn(s, today).count { !it.isDoneOn(today) }
                         val selected = s == space
                         NavigationBarItem(
                             selected = selected,

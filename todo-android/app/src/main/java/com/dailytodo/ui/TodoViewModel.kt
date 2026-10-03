@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.time.DayOfWeek
 import java.time.LocalDate
 
 class TodoViewModel(app: Application) : AndroidViewModel(app) {
@@ -48,14 +49,20 @@ class TodoViewModel(app: Application) : AndroidViewModel(app) {
         d.copy(routines = d.routines.map { if (it.id == id) it.toggledOn(_today.value) else it })
     }
 
-    fun saveRoutine(existing: Routine?, space: Space, title: String, emoji: String) = repository.update { d ->
-        if (existing == null) {
-            d.copy(routines = d.routines + Routine(newId(), space, title.trim(), emoji))
-        } else {
-            d.copy(routines = d.routines.map {
-                if (it.id == existing.id) it.copy(title = title.trim(), emoji = emoji) else it
-            })
-        }
+    fun saveRoutine(
+        existing: Routine?,
+        space: Space,
+        title: String,
+        emoji: String,
+        note: String,
+        days: Set<DayOfWeek>,
+    ) = repository.update { d ->
+        // All seven days is the same as "every day".
+        val schedule = if (days.size == 7) emptySet() else days
+        val routine = (existing ?: Routine(newId(), space, "", emoji))
+            .copy(title = title.trim(), emoji = emoji, note = note.trim(), days = schedule)
+        if (existing == null) d.copy(routines = d.routines + routine)
+        else d.copy(routines = d.routines.map { if (it.id == routine.id) routine else it })
     }
 
     fun deleteRoutine(routine: Routine) = repository.update { d ->

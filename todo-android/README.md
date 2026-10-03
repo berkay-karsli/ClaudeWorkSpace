@@ -3,14 +3,17 @@
 A to-do app with two spaces — **🏡 Home** and **🎓 University** — switched from the bottom bar.
 Each space has two sections:
 
-- **Daily routines** — things you do every day. They renew themselves every morning, so yesterday's
+- **Daily routines** — things you do regularly. They renew themselves every morning, so yesterday's
   ticks are cleared automatically. **Swipe right** to mark one done (swipe right again to undo),
-  or tap the circle. Doing a routine several days in a row builds a 🔥 streak.
+  or tap the circle. Doing a routine several times in a row builds a 🔥 streak.
+  Each routine can repeat **every day** or only on **chosen weekdays** (e.g. Mon · Wed · Fri); it
+  only appears on the days it's due. Routines for other days sit behind a "more on other days" row.
 - **Planned events** — one-off things like an exam, a bill or a dentist visit. Give each one or
   more **alert times**; you get a notification at every one of them (with a *Mark done* button).
   Quick picks like "Tomorrow 09:00" and "remind me 1 hour before" make it fast.
 
-Tap any card to edit it; swipe left to delete (with undo). Home uses warm peach tones and
+Every to-do can have **notes**. Cards show just the name (with a small 📝 icon when notes exist);
+tap a card to open it and read or edit its notes. Swipe left to delete (with undo). Home uses warm peach tones and
 University uses calm indigo; both follow your phone's light/dark mode.
 
 ## Install

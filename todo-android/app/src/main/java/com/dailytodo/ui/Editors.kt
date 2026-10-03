@@ -34,6 +34,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.InputChipDefaults
@@ -59,6 +60,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
@@ -67,6 +69,7 @@ import androidx.compose.ui.window.Dialog
 import com.dailytodo.data.PlannedEvent
 import com.dailytodo.data.Routine
 import com.dailytodo.data.Space
+import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -81,12 +84,16 @@ fun RoutineEditor(
     space: Space,
     initial: Routine?,
     onDismiss: () -> Unit,
-    onSave: (title: String, emoji: String) -> Unit,
+    onSave: (title: String, emoji: String, note: String, days: Set<DayOfWeek>) -> Unit,
     onDelete: (() -> Unit)?,
 ) {
     val emojis = if (space == Space.HOME) HomeEmojis else UniEmojis
     var title by rememberSaveable { mutableStateOf(initial?.title ?: "") }
     var emoji by rememberSaveable { mutableStateOf(initial?.emoji ?: emojis.first()) }
+    var note by rememberSaveable { mutableStateOf(initial?.note ?: "") }
+    // Empty = every day. Stored as day numbers so it survives rotation.
+    var dayNumbers by rememberSaveable { mutableStateOf(initial?.days?.map { it.value } ?: emptyList()) }
+    val days = dayNumbers.map { DayOfWeek.of(it) }.toSet()
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -95,17 +102,18 @@ fun RoutineEditor(
     ) {
         Column(
             Modifier
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp)
                 .navigationBarsPadding()
                 .imePadding()
                 .padding(bottom = 16.dp),
         ) {
             Text(
-                if (initial == null) "New daily routine" else "Edit routine",
+                if (initial == null) "New routine" else "Edit routine",
                 style = MaterialTheme.typography.headlineSmall,
             )
             Text(
-                "It resets every day, so you can tick it off again tomorrow.",
+                "It resets every day it's due, so you can tick it off again next time.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -137,16 +145,39 @@ fun RoutineEditor(
             OutlinedTextField(
                 value = title,
                 onValueChange = { title = it },
-                label = { Text("What do you do every day?") },
+                label = { Text("Name") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 shape = MaterialTheme.shapes.medium,
                 modifier = Modifier.fillMaxWidth(),
             )
+            Spacer(Modifier.height(10.dp))
+            NotesField(note) { note = it }
+
+            Spacer(Modifier.height(20.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Repeat on", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                Text(
+                    scheduleLabel(days),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+            Spacer(Modifier.height(10.dp))
+            WeekdayPicker(days) { picked -> dayNumbers = picked.map { it.value }.sorted() }
+            Spacer(Modifier.height(10.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                val weekdays = weekOrder.take(5).toSet()
+                val weekend = weekOrder.drop(5).toSet()
+                PresetChip("Every day", selected = days.isEmpty() || days.size == 7) { dayNumbers = emptyList() }
+                PresetChip("Weekdays", selected = days == weekdays) { dayNumbers = weekdays.map { it.value }.sorted() }
+                PresetChip("Weekends", selected = days == weekend) { dayNumbers = weekend.map { it.value }.sorted() }
+            }
+
             Spacer(Modifier.height(20.dp))
             SheetButtons(
                 saveEnabled = title.isNotBlank(),
-                onSave = { onSave(title, emoji) },
+                onSave = { onSave(title, emoji, note, days) },
                 onDelete = onDelete,
             )
         }
@@ -215,15 +246,7 @@ fun EventEditor(
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(10.dp))
-            OutlinedTextField(
-                value = note,
-                onValueChange = { note = it },
-                label = { Text("Note (optional)") },
-                maxLines = 3,
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                shape = MaterialTheme.shapes.medium,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            NotesField(note) { note = it }
 
             Spacer(Modifier.height(20.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -316,6 +339,58 @@ fun EventEditor(
             },
         )
     }
+}
+
+@Composable
+private fun NotesField(value: String, onChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onChange,
+        label = { Text("Notes & details (optional)") },
+        placeholder = { Text("Only shown when you open this to-do") },
+        minLines = 3,
+        maxLines = 10,
+        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+/** Seven round day toggles. Nothing selected means every day. */
+@Composable
+private fun WeekdayPicker(selected: Set<DayOfWeek>, onChange: (Set<DayOfWeek>) -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    val everyDay = selected.isEmpty() || selected.size == 7
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        weekOrder.forEach { day ->
+            val on = everyDay || day in selected
+            Box(
+                Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(if (on) colors.primary else colors.surfaceContainer)
+                    .border(1.dp, if (on) colors.primary else colors.outlineVariant, CircleShape)
+                    .clickable {
+                        val current = if (everyDay) weekOrder.toSet() else selected
+                        val next = if (day in current) current - day else current + day
+                        // Turning off the last day falls back to every day rather than never.
+                        onChange(if (next.isEmpty()) emptySet() else next)
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    day.letter(),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (on) colors.onPrimary else colors.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PresetChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    FilterChip(selected = selected, onClick = onClick, label = { Text(label) })
 }
 
 @Composable

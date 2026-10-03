@@ -2,6 +2,7 @@ package com.dailytodo.data
 
 import org.json.JSONArray
 import org.json.JSONObject
+import java.time.DayOfWeek
 
 object TodoJson {
     fun encode(data: TodoData): String = JSONObject().apply {
@@ -14,6 +15,8 @@ object TodoJson {
                     put("title", r.title)
                     put("emoji", r.emoji)
                     put("doneDates", JSONArray(r.doneDates.sorted()))
+                    put("note", r.note)
+                    put("days", JSONArray(r.days.map { it.value }.sorted()))
                 })
             }
         })
@@ -40,6 +43,8 @@ object TodoJson {
                 title = o.getString("title"),
                 emoji = o.optString("emoji", "✨"),
                 doneDates = o.optJSONArray("doneDates").strings().toSet(),
+                note = o.optString("note", ""),
+                days = o.optJSONArray("days").longs().map { DayOfWeek.of(it.toInt()) }.toSet(),
             )
         }
         val events = root.optJSONArray("events").objects().map { o ->
