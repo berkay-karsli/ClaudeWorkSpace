@@ -3,6 +3,7 @@
 package com.dailytodo.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -52,10 +53,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -66,8 +69,8 @@ import kotlinx.coroutines.launch
 import java.time.LocalTime
 
 /**
- * The alarm ladder: saved lists of steps that are lined up with a deadline and sent to the
- * phone's clock app as real alarms.
+ * The alarm ladder: a saved deadline plus alarms that count back from it, sent to the phone's
+ * clock app as real alarms.
  */
 @Composable
 fun AlarmsScreen(
@@ -81,7 +84,9 @@ fun AlarmsScreen(
     var selectedId by rememberSaveable { mutableStateOf(presets.firstOrNull()?.id ?: 0L) }
     val preset = presets.firstOrNull { it.id == selectedId } ?: presets.firstOrNull()
     var pickingDeadline by remember { mutableStateOf(false) }
-    var addingStep by remember { mutableStateOf(false) }
+    var addingAlarm by remember { mutableStateOf(false) }
+    // The alarm (minutes before the deadline) whose time is being changed.
+    var movingOffset by remember { mutableStateOf<Int?>(null) }
     var confirmDelete by remember { mutableStateOf(false) }
     // Which alarm is being sent to the clock app right now (1-based), or null when idle.
     var sending by remember { mutableStateOf<Int?>(null) }
@@ -137,17 +142,14 @@ fun AlarmsScreen(
             DeadlineCard(preset.deadline) { pickingDeadline = true }
         }
 
-        item(key = "steps-${preset.id}") {
-            StepsCard(
+        item(key = "alarms-${preset.id}") {
+            LadderAlarmsCard(
                 preset = preset,
-                onRemove = { step -> update { it.copy(steps = it.steps - step) } },
-                onAdd = { addingStep = true },
-                onAddAfterLast = { gap ->
-                    update {
-                        val next = it.sortedSteps.last() + gap
-                        if (next < AlarmPreset.MINUTES_PER_DAY) it.copy(steps = it.steps + next) else it
-                    }
-                },
+                onRemove = { offset -> update { it.withoutOffset(offset) } },
+                onMove = { offset -> movingOffset = offset },
+                onDeadline = { pickingDeadline = true },
+                onAdd = { addingAlarm = true },
+                onAddEarlier = { gap -> update { it.withEarlierAlarm(gap) } },
             )
         }
 
@@ -173,7 +175,7 @@ fun AlarmsScreen(
 
         item(key = "apply-${preset.id}") {
             Column(Modifier.padding(horizontal = 16.dp)) {
-                val count = preset.sortedSteps.size
+                val count = preset.offsets.size
                 Button(
                     onClick = {
                         scope.launch {
@@ -230,17 +232,35 @@ fun AlarmsScreen(
             },
         )
     }
-    if (preset != null && addingStep) {
-        val suggestion = (preset.sortedSteps.last() + 10).coerceAtMost(AlarmPreset.MINUTES_PER_DAY - 1)
+    if (preset != null && addingAlarm) {
+        // Suggest 10 minutes before the earliest alarm.
+        val suggestion = preset.timeOf(preset.offsets.first() + 10)
         TimeDialog(
-            title = "Add a step (hh:mm on your timeline)",
+            title = "Add an alarm",
             confirmLabel = "Add",
             initial = LocalTime.of(suggestion / 60, suggestion % 60),
-            force24Hour = true,
-            onDismiss = { addingStep = false },
+            onDismiss = { addingAlarm = false },
             onPicked = { time ->
-                addingStep = false
-                update { it.copy(steps = (it.steps + (time.hour * 60 + time.minute)).distinct()) }
+                addingAlarm = false
+                val minute = time.hour * 60 + time.minute
+                if (preset.offsetOf(minute) == 0) showMessage("That's the deadline — it always rings")
+                else update { it.withAlarmAt(minute) }
+            },
+        )
+    }
+    val moving = movingOffset
+    if (preset != null && moving != null) {
+        val current = preset.timeOf(moving)
+        TimeDialog(
+            title = "Change alarm time",
+            confirmLabel = "Save",
+            initial = LocalTime.of(current / 60, current % 60),
+            onDismiss = { movingOffset = null },
+            onPicked = { time ->
+                movingOffset = null
+                val minute = time.hour * 60 + time.minute
+                if (preset.offsetOf(minute) == 0) showMessage("That's the deadline — it always rings")
+                else update { it.movedTo(moving, minute) }
             },
         )
     }
@@ -326,7 +346,7 @@ private fun DeadlineCard(deadline: Int, onClick: () -> Unit) {
                     color = colors.onPrimary,
                 )
                 Text(
-                    "The last alarm rings at this time",
+                    "Always rings · the other alarms count back from here",
                     style = MaterialTheme.typography.bodySmall,
                     color = colors.onPrimary.copy(alpha = 0.8f),
                 )
@@ -337,59 +357,80 @@ private fun DeadlineCard(deadline: Int, onClick: () -> Unit) {
 }
 
 @Composable
-private fun StepsCard(
+private fun LadderAlarmsCard(
     preset: AlarmPreset,
     onRemove: (Int) -> Unit,
+    onMove: (Int) -> Unit,
+    onDeadline: () -> Unit,
     onAdd: () -> Unit,
-    onAddAfterLast: (Int) -> Unit,
+    onAddEarlier: (Int) -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
-    val steps = preset.sortedSteps
-    val times = preset.alarmTimes()
+    val offsets = preset.offsets
     LadderCard {
-        Text("Steps", style = SectionTitle)
+        Text("Alarms", style = SectionTitle)
         Text(
-            "Times on a timeline. The latest step lines up with the deadline; the others keep their distance from it.",
+            "Each alarm keeps its distance from the deadline, so adding or removing one never moves " +
+                "the others. Change the deadline and they all move together. Tap a time to change it.",
             style = MaterialTheme.typography.bodySmall,
             color = colors.onSurfaceVariant,
         )
         Spacer(Modifier.height(12.dp))
-        steps.zip(times).forEach { (step, time) ->
-            val before = preset.minutesBefore(step)
-            Row(Modifier.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        offsets.forEach { offset ->
+            val isDeadline = offset == 0
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(MaterialTheme.shapes.small)
+                    .clickable { if (isDeadline) onDeadline() else onMove(offset) }
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Text(
-                    formatStep(step),
+                    if (isDeadline) "Deadline" else "−${ClockApp.durationLabel(offset)}",
                     style = MaterialTheme.typography.labelLarge,
-                    color = colors.onSurfaceVariant,
+                    color = if (isDeadline) colors.onPrimary else colors.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
                     modifier = Modifier
-                        .background(colors.surfaceContainer, RoundedCornerShape(50))
-                        .padding(horizontal = 10.dp, vertical = 4.dp)
-                        .widthIn(min = 40.dp),
+                        .background(if (isDeadline) colors.primary else colors.surfaceContainer, RoundedCornerShape(50))
+                        .padding(horizontal = 10.dp, vertical = 5.dp)
+                        .widthIn(min = 84.dp),
                 )
-                Text("  →  ", color = colors.outline)
-                Column(Modifier.weight(1f)) {
-                    Text(formatMinuteOfDay(time), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(
-                        if (before == 0) "deadline" else "${ClockApp.durationLabel(before)} before",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (before == 0) colors.primary else colors.onSurfaceVariant,
-                    )
-                }
-                IconButton(onClick = { onRemove(step) }, enabled = steps.size > 1) {
-                    Icon(Icons.Rounded.Close, contentDescription = "Remove step ${formatStep(step)}")
+                Spacer(Modifier.width(14.dp))
+                Text(
+                    formatMinuteOfDay(preset.timeOf(offset)),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isDeadline) colors.primary else colors.onSurface,
+                    modifier = Modifier.weight(1f),
+                )
+                if (isDeadline) {
+                    Spacer(Modifier.size(48.dp))
+                } else {
+                    IconButton(onClick = { onRemove(offset) }) {
+                        Icon(Icons.Rounded.Close, contentDescription = "Remove ${formatMinuteOfDay(preset.timeOf(offset))}")
+                    }
                 }
             }
         }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(10.dp))
         OutlinedButton(onClick = onAdd, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Rounded.Add, null, Modifier.size(18.dp))
-            Text("  Add a step")
+            Text("  Add an alarm at a time")
         }
-        Spacer(Modifier.height(6.dp))
-        Text("Add after the last step", style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
+        Spacer(Modifier.height(10.dp))
+        Text(
+            "Add one more before ${formatMinuteOfDay(preset.timeOf(offsets.first()))} — tap as often as you like",
+            style = MaterialTheme.typography.labelMedium,
+            color = colors.onSurfaceVariant,
+        )
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(5, 10, 15, 30, 60).forEach { gap ->
-                SuggestionChip(onClick = { onAddAfterLast(gap) }, label = { Text("+${ClockApp.durationLabel(gap)}") })
+                SuggestionChip(
+                    onClick = { onAddEarlier(gap) },
+                    enabled = offsets.first() + gap < AlarmPreset.MINUTES_PER_DAY,
+                    label = { Text("−${ClockApp.durationLabel(gap)}") },
+                )
             }
         }
     }

@@ -19,10 +19,12 @@ like an alarm** — a full-screen alarm screen over the lock screen with *Stop*,
 post a notification. Every to-do picks its **own alarm sound** from the phone's sound picker (or
 "Silent" to only vibrate).
 
-**⏰ Alarm ladder** (the *Alarms* tab). Save a list of steps on a timeline, e.g.
-`00:00, 00:10, 00:20, 00:45, 02:00`, then pick a deadline. The latest step lines up with the
-deadline and the others keep their distance, so a 10:00 deadline gives 08:00, 08:10, 08:20, 08:45
-and 10:00. **Apply** creates those alarms in your phone's own clock app. You can keep several
+**⏰ Alarm ladder** (the *Alarms* tab). Pick a deadline — it always rings — and add as many alarms
+before it as you like: tap **Add an alarm at a time**, or keep tapping **−5 min / −10 min / −15 min /
+−30 min / −1 h** to add one more before the earliest alarm. Each alarm remembers how long before the
+deadline it rings, so adding or removing one never moves the others, and changing the deadline
+moves them all together (08:00, 08:10, 08:20, 08:45 with a 10:00 deadline become 09:00 … 11:00 for
+an 11:00 deadline). **Apply** creates the alarms in your phone's own clock app. You can keep several
 ladders (e.g. "Wake-up", "Exam day"), each with its own name and sound.
 
 Every to-do can have **notes**. Cards show just the name (with a small 📝 icon when notes exist);

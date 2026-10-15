@@ -15,15 +15,14 @@ object ClockApp {
     }
 
     /**
-     * Creates one clock-app alarm per step of [preset]. Each request opens the clock app briefly,
-     * so they're sent one after another with a short pause in between.
+     * Creates one clock-app alarm per alarm of [preset], earliest first. Each request opens the
+     * clock app briefly, so they're sent one after another with a short pause in between.
      */
     suspend fun setAlarms(context: Context, preset: AlarmPreset, onProgress: (Int) -> Unit): Result {
-        val steps = preset.sortedSteps
-        val times = preset.alarmTimes()
-        steps.zip(times).forEachIndexed { index, (step, minute) ->
+        val offsets = preset.offsets
+        offsets.forEachIndexed { index, before ->
             onProgress(index + 1)
-            val before = preset.minutesBefore(step)
+            val minute = preset.timeOf(before)
             val label = if (before == 0) "${preset.name} · deadline" else "${preset.name} · ${durationLabel(before)} left"
             try {
                 context.startActivity(setAlarmIntent(minute / 60, minute % 60, label, preset.sound))
@@ -32,7 +31,7 @@ object ClockApp {
             }
             delay(900)
         }
-        return Result.Done(times.size)
+        return Result.Done(offsets.size)
     }
 
     private fun setAlarmIntent(hour: Int, minute: Int, label: String, sound: String) =

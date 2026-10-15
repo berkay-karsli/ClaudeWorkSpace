@@ -95,31 +95,61 @@ data class PlannedEvent(
 }
 
 /**
- * A saved "alarm ladder" for the clock app. [steps] are times on a timeline (minutes, e.g. 00:00,
- * 00:10, 00:20, 00:45, 02:00); the latest step lines up with the [deadline] and the others keep
- * their distance from it. Steps 0/10/20/45/120 with a 10:00 deadline give 08:00, 08:10, 08:20,
- * 08:45 and 10:00.
+ * A saved "alarm ladder" for the clock app: a [deadline] that always rings, plus extra alarms
+ * that each ring a fixed number of minutes ([before]) ahead of it. Every alarm only depends on the
+ * deadline, so adding or removing one never moves the others. With a 10:00 deadline and
+ * before = 120, 110, 100, 75 the alarms are 08:00, 08:10, 08:20, 08:45 and 10:00.
  */
 data class AlarmPreset(
     val id: Long,
     val name: String,
-    val steps: List<Int> = listOf(0),
+    /** Minutes before the deadline of each extra alarm (1 to 23 h 59 min). */
+    val before: List<Int> = emptyList(),
     /** Minutes after midnight. */
     val deadline: Int = 8 * 60,
     val sound: String = "",
 ) {
-    val sortedSteps: List<Int> get() = steps.distinct().sorted().ifEmpty { listOf(0) }
+    /** Minutes before the deadline of every alarm, earliest first, ending with 0 (the deadline). */
+    val offsets: List<Int>
+        get() = (before.filter { it in 1 until MINUTES_PER_DAY } + 0).distinct().sortedDescending()
 
-    /** How long before the deadline a step rings, in minutes. */
-    fun minutesBefore(step: Int): Int = sortedSteps.last() - step
+    /** The clock time (minutes after midnight) of the alarm [offset] minutes before the deadline. */
+    fun timeOf(offset: Int): Int = Math.floorMod(deadline - offset, MINUTES_PER_DAY)
 
-    /** The clock times (minutes after midnight) of every alarm, earliest first. */
-    fun alarmTimes(): List<Int> = sortedSteps.map { Math.floorMod(deadline - minutesBefore(it), MINUTES_PER_DAY) }
+    /** The clock times of every alarm, earliest first. */
+    fun alarmTimes(): List<Int> = offsets.map(::timeOf)
+
+    /** How far a clock time is ahead of the deadline, counting back up to 24 hours. */
+    fun offsetOf(minuteOfDay: Int): Int = Math.floorMod(deadline - minuteOfDay, MINUTES_PER_DAY)
+
+    /** Adds an alarm at a clock time; the deadline itself and repeats are ignored. */
+    fun withAlarmAt(minuteOfDay: Int): AlarmPreset = withOffset(offsetOf(minuteOfDay))
+
+    /** Adds an alarm [gap] minutes before the current earliest one. */
+    fun withEarlierAlarm(gap: Int): AlarmPreset = withOffset(offsets.first() + gap)
+
+    fun withoutOffset(offset: Int): AlarmPreset = copy(before = before.filterNot { it == offset })
+
+    /** Moves the alarm at [offset] to a new clock time. */
+    fun movedTo(offset: Int, minuteOfDay: Int): AlarmPreset = withoutOffset(offset).withAlarmAt(minuteOfDay)
+
+    private fun withOffset(offset: Int): AlarmPreset =
+        if (offset !in 1 until MINUTES_PER_DAY || offset in before) this
+        else copy(before = (before + offset).sortedDescending())
 
     companion object {
         const val MINUTES_PER_DAY = 24 * 60
 
-        fun example() = AlarmPreset(1, "Wake-up ladder", listOf(0, 10, 20, 45, 120), deadline = 10 * 60)
+        fun example() = AlarmPreset(1, "Wake-up ladder", listOf(120, 110, 100, 75), deadline = 10 * 60)
+
+        /**
+         * Converts the first version's timeline steps (e.g. 00:00, 00:10, 02:00, where the latest
+         * step was the deadline) into minutes before the deadline.
+         */
+        fun beforeFromSteps(steps: List<Int>): List<Int> {
+            val last = steps.maxOrNull() ?: return emptyList()
+            return steps.map { last - it }.filter { it > 0 }.distinct().sortedDescending()
+        }
     }
 }
 

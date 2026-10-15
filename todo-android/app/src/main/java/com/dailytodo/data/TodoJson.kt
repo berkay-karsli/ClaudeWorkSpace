@@ -42,7 +42,7 @@ object TodoJson {
                 put(JSONObject().apply {
                     put("id", p.id)
                     put("name", p.name)
-                    put("steps", JSONArray(p.steps))
+                    put("before", JSONArray(p.before))
                     put("deadline", p.deadline)
                     put("sound", p.sound)
                 })
@@ -84,7 +84,8 @@ object TodoJson {
                 AlarmPreset(
                     id = o.getLong("id"),
                     name = o.optString("name", ""),
-                    steps = o.optJSONArray("steps").longs().map { it.toInt() },
+                    before = if (o.has("before")) o.optJSONArray("before").longs().map { it.toInt() }
+                    else AlarmPreset.beforeFromSteps(o.optJSONArray("steps").longs().map { it.toInt() }),
                     deadline = o.optInt("deadline", 8 * 60),
                     sound = o.optString("sound", ""),
                 )

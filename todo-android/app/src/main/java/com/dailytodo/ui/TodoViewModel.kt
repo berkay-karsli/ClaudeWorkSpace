@@ -124,7 +124,7 @@ class TodoViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Adds a new preset and returns its id. */
     fun addPreset(): Long {
-        val preset = AlarmPreset(newId(), "New ladder", steps = listOf(0, 10, 20), deadline = 8 * 60)
+        val preset = AlarmPreset(newId(), "New ladder", before = listOf(20, 10), deadline = 8 * 60)
         repository.update { d -> d.copy(presets = d.presets + preset) }
         return preset.id
     }

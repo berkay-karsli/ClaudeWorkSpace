@@ -16,32 +16,62 @@ class AlarmsTest {
     private fun hm(h: Int, m: Int) = h * 60 + m
 
     @Test
-    fun ladderLinesUpTheLastStepWithTheDeadline() {
-        // The example: steps 00:00, 00:10, 00:20, 00:45, 02:00 with a 10:00 deadline.
-        val ladder = AlarmPreset(1, "Wake up", listOf(0, 10, 20, 45, 120), deadline = hm(10, 0))
-        assertEquals(
-            listOf(hm(8, 0), hm(8, 10), hm(8, 20), hm(8, 45), hm(10, 0)),
-            ladder.alarmTimes(),
-        )
-        assertEquals(120, ladder.minutesBefore(0))
-        assertEquals(0, ladder.minutesBefore(120))
+    fun ladderAlarmsCountBackFromTheDeadline() {
+        // The original example: 08:00, 08:10, 08:20, 08:45 and a 10:00 deadline.
+        val ladder = AlarmPreset(1, "Wake up", listOf(120, 110, 100, 75), deadline = hm(10, 0))
+        assertEquals(listOf(hm(8, 0), hm(8, 10), hm(8, 20), hm(8, 45), hm(10, 0)), ladder.alarmTimes())
+        // Moving the deadline moves every alarm with it.
+        assertEquals(listOf(hm(9, 0), hm(9, 10), hm(9, 20), hm(9, 45), hm(11, 0)), ladder.copy(deadline = hm(11, 0)).alarmTimes())
     }
 
     @Test
-    fun ladderStepsAreSortedAndDeduplicated() {
-        val ladder = AlarmPreset(1, "x", listOf(30, 0, 30, 15), deadline = hm(7, 0))
-        assertEquals(listOf(hm(6, 30), hm(6, 45), hm(7, 0)), ladder.alarmTimes())
+    fun tappingEarlierButtonsKeepsEarlierChoices() {
+        // Deadline 10:00, tap "−10 min" then "−5 min": 09:45, 09:50, 10:00 (09:50 must not move).
+        val ladder = AlarmPreset(1, "x", deadline = hm(10, 0)).withEarlierAlarm(10).withEarlierAlarm(5)
+        assertEquals(listOf(hm(9, 45), hm(9, 50), hm(10, 0)), ladder.alarmTimes())
+        // Keep tapping "−5 min".
+        assertEquals(
+            listOf(hm(9, 35), hm(9, 40), hm(9, 45), hm(9, 50), hm(10, 0)),
+            ladder.withEarlierAlarm(5).withEarlierAlarm(5).alarmTimes(),
+        )
+    }
+
+    @Test
+    fun removingAnAlarmLeavesTheOthersAlone() {
+        val ladder = AlarmPreset(1, "x", listOf(120, 110, 100, 75), deadline = hm(10, 0))
+        assertEquals(listOf(hm(8, 0), hm(8, 20), hm(8, 45), hm(10, 0)), ladder.withoutOffset(110).alarmTimes())
+        assertEquals(listOf(hm(8, 10), hm(8, 20), hm(8, 45), hm(10, 0)), ladder.withoutOffset(120).alarmTimes())
+    }
+
+    @Test
+    fun addingAndMovingAlarmsByClockTime() {
+        val ladder = AlarmPreset(1, "x", listOf(60), deadline = hm(10, 0))
+        assertEquals(listOf(hm(8, 30), hm(9, 0), hm(10, 0)), ladder.withAlarmAt(hm(8, 30)).alarmTimes())
+        // The deadline itself and repeats are ignored.
+        assertEquals(ladder, ladder.withAlarmAt(hm(10, 0)))
+        assertEquals(ladder, ladder.withAlarmAt(hm(9, 0)))
+        assertEquals(listOf(hm(9, 30), hm(10, 0)), ladder.movedTo(60, hm(9, 30)).alarmTimes())
     }
 
     @Test
     fun ladderWrapsPastMidnight() {
-        val ladder = AlarmPreset(1, "x", listOf(0, 90), deadline = hm(0, 30))
+        val ladder = AlarmPreset(1, "x", listOf(90), deadline = hm(0, 30))
         assertEquals(listOf(hm(23, 0), hm(0, 30)), ladder.alarmTimes())
     }
 
     @Test
     fun emptyLadderIsJustTheDeadline() {
-        assertEquals(listOf(hm(9, 0)), AlarmPreset(1, "x", emptyList(), deadline = hm(9, 0)).alarmTimes())
+        assertEquals(listOf(hm(9, 0)), AlarmPreset(1, "x", deadline = hm(9, 0)).alarmTimes())
+    }
+
+    @Test
+    fun firstVersionTimelineStepsAreConverted() {
+        assertEquals(listOf(120, 110, 100, 75), AlarmPreset.beforeFromSteps(listOf(0, 10, 20, 45, 120)))
+        val old = """{"routines":[],"events":[],"presets":[{"id":5,"name":"Old","steps":[0,10,20,45,120],"deadline":600}]}"""
+        assertEquals(
+            listOf(hm(8, 0), hm(8, 10), hm(8, 20), hm(8, 45), hm(10, 0)),
+            TodoJson.decode(old).presets.single().alarmTimes(),
+        )
     }
 
     @Test
@@ -77,7 +107,7 @@ class AlarmsTest {
         val data = TodoData(
             routines = listOf(Routine(1, Space.HOME, "Bed", "🛏️", alarmTimes = listOf(hm(7, 30)), ring = true, sound = "content://media/internal/audio/media/12")),
             events = listOf(PlannedEvent(2, Space.UNIVERSITY, "Exam", times = listOf(5L), ring = true, sound = "silent")),
-            presets = listOf(AlarmPreset(3, "Exam day", listOf(0, 15, 60), deadline = hm(9, 0), sound = "silent")),
+            presets = listOf(AlarmPreset(3, "Exam day", listOf(60, 15), deadline = hm(9, 0), sound = "silent")),
         )
         assertEquals(data, TodoJson.decode(TodoJson.encode(data)))
     }
