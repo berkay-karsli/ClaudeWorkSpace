@@ -4,6 +4,7 @@ import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -19,6 +20,12 @@ fun Long.toLocalDateTime(): LocalDateTime = LocalDateTime.ofInstant(Instant.ofEp
 fun LocalDateTime.toEpochMillis(): Long = atZone(zone).toInstant().toEpochMilli()
 
 fun formatTime(millis: Long): String = millis.toLocalDateTime().format(timeFormat)
+
+/** A clock time given as minutes after midnight, in the phone's style ("08:30" or "8:30 AM"). */
+fun formatMinuteOfDay(minute: Int): String = LocalTime.of(minute / 60, minute % 60).format(timeFormat)
+
+/** A position on an alarm ladder's timeline, always "hh:mm" (e.g. "02:00"). */
+fun formatStep(minutes: Int): String = "%02d:%02d".format(minutes / 60, minutes % 60)
 
 fun formatDay(date: LocalDate, today: LocalDate): String {
     val days = ChronoUnit.DAYS.between(today, date)

@@ -180,8 +180,8 @@ fun SpaceScreen(
             space = space,
             initial = e.routine,
             onDismiss = { editing = null },
-            onSave = { title, emoji, note, days ->
-                viewModel.saveRoutine(e.routine, space, title, emoji, note, days)
+            onSave = { routine ->
+                viewModel.saveRoutine(routine)
                 editing = null
             },
             onDelete = e.routine?.let { r ->
@@ -192,11 +192,12 @@ fun SpaceScreen(
             },
         )
         is Editing.EventSheet -> EventEditor(
+            space = space,
             initial = e.event,
             today = today,
             onDismiss = { editing = null },
-            onSave = { title, note, times ->
-                viewModel.saveEvent(e.event, space, title, note, times)
+            onSave = { event ->
+                viewModel.saveEvent(event)
                 editing = null
             },
             onDelete = e.event?.let { ev ->

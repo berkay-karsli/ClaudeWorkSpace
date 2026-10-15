@@ -3,9 +3,9 @@ package com.dailytodo.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.dailytodo.data.AlarmPreset
 import com.dailytodo.data.PlannedEvent
 import com.dailytodo.data.Routine
-import com.dailytodo.data.Space
 import com.dailytodo.data.TodoData
 import com.dailytodo.todoApp
 import kotlinx.coroutines.delay
@@ -13,7 +13,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.time.DayOfWeek
 import java.time.LocalDate
 
 class TodoViewModel(app: Application) : AndroidViewModel(app) {
@@ -49,38 +48,50 @@ class TodoViewModel(app: Application) : AndroidViewModel(app) {
         d.copy(routines = d.routines.map { if (it.id == id) it.toggledOn(_today.value) else it })
     }
 
-    fun saveRoutine(
-        existing: Routine?,
-        space: Space,
-        title: String,
-        emoji: String,
-        note: String,
-        days: Set<DayOfWeek>,
-    ) = repository.update { d ->
-        // All seven days is the same as "every day".
-        val schedule = if (days.size == 7) emptySet() else days
-        val routine = (existing ?: Routine(newId(), space, "", emoji))
-            .copy(title = title.trim(), emoji = emoji, note = note.trim(), days = schedule)
-        if (existing == null) d.copy(routines = d.routines + routine)
-        else d.copy(routines = d.routines.map { if (it.id == routine.id) routine else it })
+    /** Saves a routine from the editor; an id of 0 means it's new. */
+    fun saveRoutine(draft: Routine) {
+        val routine = draft.copy(
+            id = if (draft.id == 0L) newId() else draft.id,
+            title = draft.title.trim(),
+            note = draft.note.trim(),
+            // All seven days is the same as "every day".
+            days = if (draft.days.size == 7) emptySet() else draft.days,
+            alarmTimes = draft.alarmTimes.distinct().sorted(),
+        )
+        val existing = repository.routine(routine.id)
+        existing?.let(scheduler::cancelRoutine)
+        repository.update { d ->
+            if (existing == null) d.copy(routines = d.routines + routine)
+            else d.copy(routines = d.routines.map { if (it.id == routine.id) routine else it })
+        }
+        scheduler.scheduleRoutine(routine)
     }
 
-    fun deleteRoutine(routine: Routine) = repository.update { d ->
-        d.copy(routines = d.routines.filterNot { it.id == routine.id })
+    fun deleteRoutine(routine: Routine) {
+        scheduler.cancelRoutine(routine)
+        repository.update { d -> d.copy(routines = d.routines.filterNot { it.id == routine.id }) }
     }
 
-    fun restoreRoutine(routine: Routine, index: Int) = repository.update { d ->
-        val list = d.routines.toMutableList()
-        list.add(index.coerceIn(0, list.size), routine)
-        d.copy(routines = list)
+    fun restoreRoutine(routine: Routine, index: Int) {
+        repository.update { d ->
+            val list = d.routines.toMutableList()
+            list.add(index.coerceIn(0, list.size), routine)
+            d.copy(routines = list)
+        }
+        scheduler.scheduleRoutine(routine)
     }
 
     // --- Planned events ---
 
-    fun saveEvent(existing: PlannedEvent?, space: Space, title: String, note: String, times: List<Long>) {
-        val event = (existing ?: PlannedEvent(newId(), space, "")).copy(
-            title = title.trim(), note = note.trim(), times = times.distinct().sorted(),
+    /** Saves an event from the editor; an id of 0 means it's new. */
+    fun saveEvent(draft: PlannedEvent) {
+        val event = draft.copy(
+            id = if (draft.id == 0L) newId() else draft.id,
+            title = draft.title.trim(),
+            note = draft.note.trim(),
+            times = draft.times.distinct().sorted(),
         )
+        val existing = repository.event(event.id)
         existing?.let(scheduler::cancel)
         repository.update { d ->
             if (existing == null) d.copy(events = d.events + event)
@@ -104,6 +115,25 @@ class TodoViewModel(app: Application) : AndroidViewModel(app) {
         repository.update { d -> d.copy(events = d.events + event) }
         scheduler.schedule(event)
     }
+
+    // --- Alarm ladder presets ---
+
+    fun updatePreset(id: Long, change: (AlarmPreset) -> AlarmPreset) = repository.update { d ->
+        d.copy(presets = d.presets.map { if (it.id == id) change(it) else it })
+    }
+
+    /** Adds a new preset and returns its id. */
+    fun addPreset(): Long {
+        val preset = AlarmPreset(newId(), "New ladder", steps = listOf(0, 10, 20), deadline = 8 * 60)
+        repository.update { d -> d.copy(presets = d.presets + preset) }
+        return preset.id
+    }
+
+    fun deletePreset(preset: AlarmPreset) = repository.update { d ->
+        d.copy(presets = d.presets.filterNot { it.id == preset.id })
+    }
+
+    fun restorePreset(preset: AlarmPreset) = repository.update { d -> d.copy(presets = d.presets + preset) }
 
     fun routineIndex(routine: Routine) = data.value.routines.indexOfFirst { it.id == routine.id }
 

@@ -12,8 +12,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import com.dailytodo.data.Space
+import com.dailytodo.ui.Tab
 import com.dailytodo.ui.TodoRoot
 import com.dailytodo.ui.TodoViewModel
+import com.dailytodo.ui.tab
 
 class MainActivity : ComponentActivity() {
     private val viewModel: TodoViewModel by viewModels()
@@ -24,15 +26,15 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         requestedSpace = spaceFrom(intent)
         setContent {
-            var space by rememberSaveable { mutableStateOf(requestedSpace ?: Space.HOME) }
+            var tab by rememberSaveable { mutableStateOf(requestedSpace?.tab ?: Tab.HOME) }
             // Opening the app from an event notification jumps to that event's space.
             LaunchedEffect(requestedSpace) {
                 requestedSpace?.let {
-                    space = it
+                    tab = it.tab
                     requestedSpace = null
                 }
             }
-            TodoRoot(viewModel, space, onSpaceChange = { space = it })
+            TodoRoot(viewModel, tab, onTabChange = { tab = it })
         }
     }
 

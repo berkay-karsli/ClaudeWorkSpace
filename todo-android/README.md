@@ -12,6 +12,19 @@ Each space has two sections:
   more **alert times**; you get a notification at every one of them (with a *Mark done* button).
   Quick picks like "Tomorrow 09:00" and "remind me 1 hour before" make it fast.
 
+**Alarms for each to-do.** Routines can have alarm times (they go off on the days the routine is
+due, unless it's already done) and events ring at their alert times. Each to-do can either **ring
+like an alarm** — a full-screen alarm screen over the lock screen with *Stop*, *Snooze 10 min* and
+*Stop & mark as done*, playing on the alarm volume and getting louder over a few seconds — or just
+post a notification. Every to-do picks its **own alarm sound** from the phone's sound picker (or
+"Silent" to only vibrate).
+
+**⏰ Alarm ladder** (the *Alarms* tab). Save a list of steps on a timeline, e.g.
+`00:00, 00:10, 00:20, 00:45, 02:00`, then pick a deadline. The latest step lines up with the
+deadline and the others keep their distance, so a 10:00 deadline gives 08:00, 08:10, 08:20, 08:45
+and 10:00. **Apply** creates those alarms in your phone's own clock app. You can keep several
+ladders (e.g. "Wake-up", "Exam day"), each with its own name and sound.
+
 Every to-do can have **notes**. Cards show just the name (with a small 📝 icon when notes exist);
 tap a card to open it and read or edit its notes. Swipe left to delete (with undo). Home uses warm peach tones and
 University uses calm indigo; both follow your phone's light/dark mode.

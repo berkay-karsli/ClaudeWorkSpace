@@ -14,8 +14,8 @@ class TodoApp : Application() {
         super.onCreate()
         repository = TodoRepository(this)
         scheduler = ReminderScheduler(this)
-        scheduler.createChannel()
-        scheduler.rescheduleAll(repository.data.value.events)
+        scheduler.createChannels()
+        scheduler.rescheduleAll(repository.data.value)
     }
 }
 

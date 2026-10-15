@@ -14,7 +14,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.dailytodo.data.Space
+import com.dailytodo.ui.Tab
 
 // Home: warm peach & coral. University: calm indigo & lavender.
 private val HomeLight = lightColorScheme(
@@ -113,9 +113,59 @@ private val UniDark = darkColorScheme(
     error = Color(0xFFFF8A80),
 )
 
-fun spaceColors(space: Space, dark: Boolean): ColorScheme = when (space) {
-    Space.HOME -> if (dark) HomeDark else HomeLight
-    Space.UNIVERSITY -> if (dark) UniDark else UniLight
+// Alarms: fresh dawn teal.
+private val AlarmLight = lightColorScheme(
+    primary = Color(0xFF128C88),
+    onPrimary = Color.White,
+    primaryContainer = Color(0xFFC9F0EA),
+    onPrimaryContainer = Color(0xFF00302D),
+    secondary = Color(0xFF4C9BE0),
+    secondaryContainer = Color(0xFFDCEBFF),
+    onSecondaryContainer = Color(0xFF0B2F55),
+    tertiary = Color(0xFF4DAA82),
+    tertiaryContainer = Color(0xFFD3F2E3),
+    onTertiaryContainer = Color(0xFF0B3B26),
+    background = Color(0xFFF3FAF9),
+    onBackground = Color(0xFF172322),
+    surface = Color(0xFFFAFEFD),
+    onSurface = Color(0xFF172322),
+    surfaceVariant = Color(0xFFDFEDEB),
+    onSurfaceVariant = Color(0xFF4F6461),
+    surfaceContainer = Color(0xFFE9F5F3),
+    surfaceContainerHigh = Color(0xFFE0EFEC),
+    outline = Color(0xFFB7CCC9),
+    outlineVariant = Color(0xFFD5E5E2),
+    error = Color(0xFFD64545),
+)
+
+private val AlarmDark = darkColorScheme(
+    primary = Color(0xFF7FDCD3),
+    onPrimary = Color(0xFF003733),
+    primaryContainer = Color(0xFF0F4F4B),
+    onPrimaryContainer = Color(0xFFC9F0EA),
+    secondary = Color(0xFFA4CBFF),
+    secondaryContainer = Color(0xFF1E3F66),
+    onSecondaryContainer = Color(0xFFDCEBFF),
+    tertiary = Color(0xFF7FD6AE),
+    tertiaryContainer = Color(0xFF1C4A36),
+    onTertiaryContainer = Color(0xFFD3F2E3),
+    background = Color(0xFF0F1817),
+    onBackground = Color(0xFFDCEBE8),
+    surface = Color(0xFF152120),
+    onSurface = Color(0xFFDCEBE8),
+    surfaceVariant = Color(0xFF2A3B39),
+    onSurfaceVariant = Color(0xFFB9CDCA),
+    surfaceContainer = Color(0xFF1C2928),
+    surfaceContainerHigh = Color(0xFF243331),
+    outline = Color(0xFF5A6F6C),
+    outlineVariant = Color(0xFF344644),
+    error = Color(0xFFFF8A80),
+)
+
+fun tabColors(tab: Tab, dark: Boolean): ColorScheme = when (tab) {
+    Tab.HOME -> if (dark) HomeDark else HomeLight
+    Tab.UNIVERSITY -> if (dark) UniDark else UniLight
+    Tab.ALARMS -> if (dark) AlarmDark else AlarmLight
 }
 
 private val AppTypography = Typography().run {
@@ -135,9 +185,9 @@ private val AppShapes = Shapes(
 )
 
 @Composable
-fun TodoTheme(space: Space, content: @Composable () -> Unit) {
+fun TodoTheme(tab: Tab, content: @Composable () -> Unit) {
     MaterialTheme(
-        colorScheme = spaceColors(space, isSystemInDarkTheme()),
+        colorScheme = tabColors(tab, isSystemInDarkTheme()),
         typography = AppTypography,
         shapes = AppShapes,
         content = content,

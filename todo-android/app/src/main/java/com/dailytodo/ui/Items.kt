@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Alarm
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.NotificationsActive
@@ -161,7 +162,7 @@ private fun RoutineCard(
                     .weight(1f)
                     .alpha(contentAlpha),
             ) {
-                TitleWithNoteHint(routine.title, hasNote = routine.note.isNotBlank(), strike = done)
+                TitleWithNoteHint(routine.title, hasNote = routine.note.isNotBlank(), strike = done, hasAlarm = routine.alarmTimes.isNotEmpty())
                 Text(
                     when {
                         !scheduledToday -> scheduleLabel(routine.days)
@@ -185,7 +186,7 @@ private fun RoutineCard(
 
 /** The card shows only the name; a small icon hints that notes are inside. */
 @Composable
-private fun TitleWithNoteHint(title: String, hasNote: Boolean, strike: Boolean) {
+private fun TitleWithNoteHint(title: String, hasNote: Boolean, strike: Boolean, hasAlarm: Boolean = false) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
             title,
@@ -195,6 +196,15 @@ private fun TitleWithNoteHint(title: String, hasNote: Boolean, strike: Boolean) 
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f, fill = false),
         )
+        if (hasAlarm) {
+            Spacer(Modifier.width(6.dp))
+            Icon(
+                Icons.Rounded.Alarm,
+                contentDescription = "Has an alarm",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(16.dp),
+            )
+        }
         if (hasNote) {
             Spacer(Modifier.width(6.dp))
             Icon(
@@ -355,8 +365,16 @@ private fun EventCard(event: PlannedEvent, today: LocalDate, now: Long, onToggle
                 CheckCircle(checked = event.done, onClick = onToggleDone)
                 Spacer(Modifier.height(10.dp))
                 Icon(
-                    if (event.isActive(now)) Icons.Rounded.NotificationsActive else Icons.Rounded.NotificationsNone,
-                    contentDescription = if (event.isActive(now)) "Alerts on" else "No upcoming alerts",
+                    when {
+                        !event.isActive(now) -> Icons.Rounded.NotificationsNone
+                        event.ring -> Icons.Rounded.Alarm
+                        else -> Icons.Rounded.NotificationsActive
+                    },
+                    contentDescription = when {
+                        !event.isActive(now) -> "No upcoming alerts"
+                        event.ring -> "Rings like an alarm"
+                        else -> "Notification alerts"
+                    },
                     tint = if (event.isActive(now)) colors.primary else colors.outline,
                     modifier = Modifier.size(20.dp),
                 )

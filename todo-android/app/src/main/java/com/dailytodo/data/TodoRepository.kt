@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
+import java.time.LocalDate
 import java.util.concurrent.Executors
 
 /** Holds all to-dos in memory and mirrors them to a small JSON file. */
@@ -29,6 +30,17 @@ class TodoRepository(context: Context) {
 
     fun event(id: Long): PlannedEvent? = _data.value.events.firstOrNull { it.id == id }
 
+    fun routine(id: Long): Routine? = _data.value.routines.firstOrNull { it.id == id }
+
+    fun markEventDone(id: Long) = update { d ->
+        d.copy(events = d.events.map { if (it.id == id) it.copy(done = true) else it })
+    }
+
+    /** Ticks a routine off for [date]; does nothing if it is already done. */
+    fun markRoutineDone(id: Long, date: LocalDate) = update { d ->
+        d.copy(routines = d.routines.map { if (it.id == id && !it.isDoneOn(date)) it.toggledOn(date) else it })
+    }
+
     private fun load(): TodoData {
         if (!file.exists()) return starterData()
         return try {
@@ -51,6 +63,7 @@ class TodoRepository(context: Context) {
                 r(Space.UNIVERSITY, "📚", "Review today's lecture notes"),
                 r(Space.UNIVERSITY, "✉️", "Check university email"),
             ),
+            presets = listOf(AlarmPreset.example()),
         )
     }
 }

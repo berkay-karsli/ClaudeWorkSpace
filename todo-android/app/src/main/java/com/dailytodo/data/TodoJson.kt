@@ -17,6 +17,9 @@ object TodoJson {
                     put("doneDates", JSONArray(r.doneDates.sorted()))
                     put("note", r.note)
                     put("days", JSONArray(r.days.map { it.value }.sorted()))
+                    put("alarmTimes", JSONArray(r.alarmTimes))
+                    put("ring", r.ring)
+                    put("sound", r.sound)
                 })
             }
         })
@@ -29,6 +32,19 @@ object TodoJson {
                     put("note", e.note)
                     put("times", JSONArray(e.times))
                     put("done", e.done)
+                    put("ring", e.ring)
+                    put("sound", e.sound)
+                })
+            }
+        })
+        put("presets", JSONArray().apply {
+            data.presets.forEach { p ->
+                put(JSONObject().apply {
+                    put("id", p.id)
+                    put("name", p.name)
+                    put("steps", JSONArray(p.steps))
+                    put("deadline", p.deadline)
+                    put("sound", p.sound)
                 })
             }
         })
@@ -45,6 +61,9 @@ object TodoJson {
                 doneDates = o.optJSONArray("doneDates").strings().toSet(),
                 note = o.optString("note", ""),
                 days = o.optJSONArray("days").longs().map { DayOfWeek.of(it.toInt()) }.toSet(),
+                alarmTimes = o.optJSONArray("alarmTimes").longs().map { it.toInt() },
+                ring = o.optBoolean("ring", false),
+                sound = o.optString("sound", ""),
             )
         }
         val events = root.optJSONArray("events").objects().map { o ->
@@ -55,9 +74,22 @@ object TodoJson {
                 note = o.optString("note", ""),
                 times = o.optJSONArray("times").longs(),
                 done = o.optBoolean("done", false),
+                ring = o.optBoolean("ring", false),
+                sound = o.optString("sound", ""),
             )
         }
-        return TodoData(routines, events)
+        // Saves from before the alarm ladder existed get the example ladder.
+        val presets = if (!root.has("presets")) listOf(AlarmPreset.example()) else
+            root.optJSONArray("presets").objects().map { o ->
+                AlarmPreset(
+                    id = o.getLong("id"),
+                    name = o.optString("name", ""),
+                    steps = o.optJSONArray("steps").longs().map { it.toInt() },
+                    deadline = o.optInt("deadline", 8 * 60),
+                    sound = o.optString("sound", ""),
+                )
+            }
+        return TodoData(routines, events, presets)
     }
 
     private fun JSONArray?.objects(): List<JSONObject> =

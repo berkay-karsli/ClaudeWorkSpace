@@ -13,8 +13,10 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Alarm
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.School
+import androidx.compose.material.icons.rounded.Alarm
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.School
 import androidx.compose.material3.Badge
@@ -43,7 +45,7 @@ import com.dailytodo.ui.theme.TodoTheme
 import kotlinx.coroutines.launch
 
 @Composable
-fun TodoRoot(viewModel: TodoViewModel, space: Space, onSpaceChange: (Space) -> Unit) {
+fun TodoRoot(viewModel: TodoViewModel, tab: Tab, onTabChange: (Tab) -> Unit) {
     val data by viewModel.data.collectAsStateWithLifecycle()
     val today by viewModel.today.collectAsStateWithLifecycle()
     val now by viewModel.now.collectAsStateWithLifecycle()
@@ -60,25 +62,32 @@ fun TodoRoot(viewModel: TodoViewModel, space: Space, onSpaceChange: (Space) -> U
         }
     }
 
-    TodoTheme(space) {
+    fun showMessage(message: String) {
+        scope.launch {
+            snackbar.currentSnackbarData?.dismiss()
+            snackbar.showSnackbar(message, duration = SnackbarDuration.Long)
+        }
+    }
+
+    TodoTheme(tab) {
         Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
             contentWindowInsets = WindowInsets(0),
             snackbarHost = { SnackbarHost(snackbar) },
             bottomBar = {
                 NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
-                    Space.entries.forEach { s ->
-                        val remaining = data.routinesDueOn(s, today).count { !it.isDoneOn(today) }
-                        val selected = s == space
+                    Tab.entries.forEach { t ->
+                        val remaining = t.space?.let { s -> data.routinesDueOn(s, today).count { !it.isDoneOn(today) } } ?: 0
+                        val selected = t == tab
                         NavigationBarItem(
                             selected = selected,
-                            onClick = { onSpaceChange(s) },
+                            onClick = { onTabChange(t) },
                             icon = {
                                 BadgedBox(badge = { if (remaining > 0) Badge { Text("$remaining") } }) {
-                                    Icon(s.icon(selected), contentDescription = null)
+                                    Icon(t.icon(selected), contentDescription = null)
                                 }
                             },
-                            label = { Text(s.label) },
+                            label = { Text(t.label) },
                             colors = NavigationBarItemDefaults.colors(
                                 indicatorColor = MaterialTheme.colorScheme.primaryContainer,
                                 selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -90,24 +99,34 @@ fun TodoRoot(viewModel: TodoViewModel, space: Space, onSpaceChange: (Space) -> U
             },
         ) { padding ->
             AnimatedContent(
-                targetState = space,
+                targetState = tab,
                 transitionSpec = {
                     val dir = if (targetState.ordinal > initialState.ordinal) 1 else -1
                     (slideInHorizontally { it / 6 * dir } + fadeIn()) togetherWith
                         (slideOutHorizontally { -it / 6 * dir } + fadeOut())
                 },
-                label = "space",
+                label = "tab",
             ) { shown ->
                 TodoTheme(shown) {
-                    SpaceScreen(
-                        space = shown,
-                        data = data,
-                        today = today,
-                        now = now,
-                        viewModel = viewModel,
-                        bottomPadding = padding.calculateBottomPadding(),
-                        offerUndo = ::offerUndo,
-                    )
+                    val space = shown.space
+                    if (space != null) {
+                        SpaceScreen(
+                            space = space,
+                            data = data,
+                            today = today,
+                            now = now,
+                            viewModel = viewModel,
+                            bottomPadding = padding.calculateBottomPadding(),
+                            offerUndo = ::offerUndo,
+                        )
+                    } else {
+                        AlarmsScreen(
+                            presets = data.presets,
+                            viewModel = viewModel,
+                            bottomPadding = padding.calculateBottomPadding(),
+                            showMessage = ::showMessage,
+                        )
+                    }
                 }
             }
         }
@@ -117,9 +136,12 @@ fun TodoRoot(viewModel: TodoViewModel, space: Space, onSpaceChange: (Space) -> U
 val Space.label: String get() = if (this == Space.HOME) "Home" else "University"
 val Space.emoji: String get() = if (this == Space.HOME) "🏡" else "🎓"
 
-private fun Space.icon(selected: Boolean) = when (this) {
-    Space.HOME -> if (selected) Icons.Rounded.Home else Icons.Outlined.Home
-    Space.UNIVERSITY -> if (selected) Icons.Rounded.School else Icons.Outlined.School
+private val Tab.label: String get() = space?.label ?: "Alarms"
+
+private fun Tab.icon(selected: Boolean) = when (this) {
+    Tab.HOME -> if (selected) Icons.Rounded.Home else Icons.Outlined.Home
+    Tab.UNIVERSITY -> if (selected) Icons.Rounded.School else Icons.Outlined.School
+    Tab.ALARMS -> if (selected) Icons.Rounded.Alarm else Icons.Outlined.Alarm
 }
 
 @Composable

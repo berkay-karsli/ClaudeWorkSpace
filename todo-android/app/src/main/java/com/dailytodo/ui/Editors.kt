@@ -2,7 +2,13 @@
 
 package com.dailytodo.ui
 
+import android.app.Activity
+import android.media.RingtoneManager
+import android.net.Uri
 import android.text.format.DateFormat
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,6 +26,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -28,7 +35,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AddAlarm
+import androidx.compose.material.icons.rounded.Alarm
+import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
@@ -44,6 +54,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -61,11 +72,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.core.content.IntentCompat
+import com.dailytodo.alarm.Sounds
 import com.dailytodo.data.PlannedEvent
 import com.dailytodo.data.Routine
 import com.dailytodo.data.Space
@@ -84,7 +100,7 @@ fun RoutineEditor(
     space: Space,
     initial: Routine?,
     onDismiss: () -> Unit,
-    onSave: (title: String, emoji: String, note: String, days: Set<DayOfWeek>) -> Unit,
+    onSave: (Routine) -> Unit,
     onDelete: (() -> Unit)?,
 ) {
     val emojis = if (space == Space.HOME) HomeEmojis else UniEmojis
@@ -94,6 +110,11 @@ fun RoutineEditor(
     // Empty = every day. Stored as day numbers so it survives rotation.
     var dayNumbers by rememberSaveable { mutableStateOf<List<Int>>(initial?.days?.map { it.value } ?: emptyList()) }
     val days = dayNumbers.map { DayOfWeek.of(it) }.toSet()
+    var alarmMinutes by rememberSaveable { mutableStateOf<List<Int>>(initial?.alarmTimes ?: emptyList()) }
+    // New alarms ring by default; an existing setting is kept.
+    var ring by rememberSaveable { mutableStateOf(if (initial?.alarmTimes.isNullOrEmpty()) true else initial!!.ring) }
+    var sound by rememberSaveable { mutableStateOf(initial?.sound ?: "") }
+    var pickingAlarm by remember { mutableStateOf(false) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -175,25 +196,80 @@ fun RoutineEditor(
             }
 
             Spacer(Modifier.height(20.dp))
+            EditorSectionTitle(Icons.Rounded.Alarm, "Alarm")
+            Text(
+                "Goes off at these times on the days it's due — unless you've already done it.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(8.dp))
+            if (alarmMinutes.isNotEmpty()) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    alarmMinutes.forEach { m ->
+                        InputChip(
+                            selected = true,
+                            onClick = { alarmMinutes = alarmMinutes - m },
+                            label = { Text(formatMinuteOfDay(m)) },
+                            trailingIcon = {
+                                Icon(Icons.Rounded.Close, "Remove", Modifier.size(InputChipDefaults.IconSize))
+                            },
+                        )
+                    }
+                }
+            }
+            OutlinedButton(onClick = { pickingAlarm = true }, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Rounded.AddAlarm, null, Modifier.size(18.dp))
+                Text(if (alarmMinutes.isEmpty()) "  Add an alarm time" else "  Add another time")
+            }
+            if (alarmMinutes.isNotEmpty()) {
+                Spacer(Modifier.height(10.dp))
+                AlarmStyleSection(ring, { ring = it }, sound, { sound = it })
+            }
+
+            Spacer(Modifier.height(20.dp))
             SheetButtons(
                 saveEnabled = title.isNotBlank(),
-                onSave = { onSave(title, emoji, note, days) },
+                onSave = {
+                    onSave(
+                        (initial ?: Routine(0, space, "", emoji)).copy(
+                            title = title, emoji = emoji, note = note, days = days,
+                            alarmTimes = alarmMinutes, ring = ring, sound = sound,
+                        ),
+                    )
+                },
                 onDelete = onDelete,
             )
         }
+    }
+
+    if (pickingAlarm) {
+        TimeDialog(
+            title = "Alarm time",
+            confirmLabel = "Add",
+            initial = LocalTime.of(8, 0),
+            onDismiss = { pickingAlarm = false },
+            onPicked = { time ->
+                pickingAlarm = false
+                alarmMinutes = (alarmMinutes + (time.hour * 60 + time.minute)).distinct().sorted()
+            },
+        )
     }
 }
 
 @Composable
 fun EventEditor(
+    space: Space,
     initial: PlannedEvent?,
     today: LocalDate,
     onDismiss: () -> Unit,
-    onSave: (title: String, note: String, times: List<Long>) -> Unit,
+    onSave: (PlannedEvent) -> Unit,
     onDelete: (() -> Unit)?,
 ) {
     var title by rememberSaveable { mutableStateOf(initial?.title ?: "") }
     var note by rememberSaveable { mutableStateOf(initial?.note ?: "") }
+    // New alerts ring like an alarm by default; an existing setting is kept.
+    var ring by rememberSaveable { mutableStateOf(if (initial?.times.isNullOrEmpty()) true else initial!!.ring) }
+    var sound by rememberSaveable { mutableStateOf(initial?.sound ?: "") }
     val times = remember { mutableStateListOf<Long>().apply { addAll(initial?.times?.sorted() ?: emptyList()) } }
     var pickingDate by remember { mutableStateOf(false) }
     var pickedDate by remember { mutableStateOf<LocalDate?>(null) }
@@ -231,7 +307,7 @@ fun EventEditor(
                 style = MaterialTheme.typography.headlineSmall,
             )
             Text(
-                "Add one or more times and you'll get a notification at each.",
+                "Add one or more times. Each one can ring like an alarm.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -249,14 +325,7 @@ fun EventEditor(
             NotesField(note) { note = it }
 
             Spacer(Modifier.height(20.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Rounded.NotificationsActive, null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp),
-                )
-                Text("  Alert times", style = MaterialTheme.typography.titleMedium)
-            }
+            EditorSectionTitle(Icons.Rounded.NotificationsActive, "Alert times")
             Spacer(Modifier.height(8.dp))
             if (times.isEmpty()) {
                 Text(
@@ -310,11 +379,21 @@ fun EventEditor(
                     QuickChip("1 day") { addTime(base.minusDays(1)) }
                 }
             }
+            if (times.isNotEmpty()) {
+                Spacer(Modifier.height(12.dp))
+                AlarmStyleSection(ring, { ring = it }, sound, { sound = it })
+            }
 
             Spacer(Modifier.height(20.dp))
             SheetButtons(
                 saveEnabled = title.isNotBlank(),
-                onSave = { onSave(title, note, times.toList()) },
+                onSave = {
+                    onSave(
+                        (initial ?: PlannedEvent(0, space, "")).copy(
+                            title = title, note = note, times = times.toList(), ring = ring, sound = sound,
+                        ),
+                    )
+                },
                 onDelete = onDelete,
             )
         }
@@ -338,6 +417,78 @@ fun EventEditor(
                 addTime(date.atTime(time))
             },
         )
+    }
+}
+
+@Composable
+private fun EditorSectionTitle(icon: ImageVector, text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+        Text("  $text", style = MaterialTheme.typography.titleMedium)
+    }
+}
+
+/** "Ring like an alarm" switch plus, when on, the sound to ring with. */
+@Composable
+private fun AlarmStyleSection(ring: Boolean, onRingChange: (Boolean) -> Unit, sound: String, onSoundChange: (String) -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    Surface(shape = MaterialTheme.shapes.medium, color = colors.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.Alarm, null, tint = colors.primary)
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Ring like an alarm", style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        if (ring) "Full screen, keeps ringing until you stop or snooze it"
+                        else "Just a notification",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colors.onSurfaceVariant,
+                    )
+                }
+                Switch(checked = ring, onCheckedChange = onRingChange)
+            }
+            AnimatedVisibility(ring) {
+                Column {
+                    Spacer(Modifier.height(10.dp))
+                    SoundRow(sound, onSoundChange, container = colors.surface)
+                }
+            }
+        }
+    }
+}
+
+/** Shows the chosen sound; tapping opens the phone's sound picker. */
+@Composable
+internal fun SoundRow(
+    sound: String,
+    onChange: (String) -> Unit,
+    label: String = "Sound",
+    container: Color = MaterialTheme.colorScheme.surfaceContainer,
+) {
+    val context = LocalContext.current
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val uri = result.data?.let { IntentCompat.getParcelableExtra(it, RingtoneManager.EXTRA_RINGTONE_PICKED_URI, Uri::class.java) }
+            onChange(Sounds.fromPicked(uri))
+        }
+    }
+    val name = remember(sound) { Sounds.label(context, sound) }
+    Surface(
+        onClick = { runCatching { picker.launch(Sounds.pickerIntent(sound)) } },
+        shape = MaterialTheme.shapes.small,
+        color = container,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.MusicNote, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(name, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            Icon(Icons.Rounded.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 
@@ -442,19 +593,25 @@ private fun DateDialog(today: LocalDate, onDismiss: () -> Unit, onPicked: (Local
 }
 
 @Composable
-private fun TimeDialog(onDismiss: () -> Unit, onPicked: (LocalTime) -> Unit) {
+internal fun TimeDialog(
+    onDismiss: () -> Unit,
+    onPicked: (LocalTime) -> Unit,
+    title: String = "At what time?",
+    confirmLabel: String = "Add alert",
+    initial: LocalTime = LocalTime.now().plusHours(1).withMinute(0),
+    force24Hour: Boolean = false,
+) {
     val context = LocalContext.current
-    val start = LocalTime.now().plusHours(1)
     val state = rememberTimePickerState(
-        initialHour = start.hour,
-        initialMinute = 0,
-        is24Hour = DateFormat.is24HourFormat(context),
+        initialHour = initial.hour,
+        initialMinute = initial.minute,
+        is24Hour = force24Hour || DateFormat.is24HourFormat(context),
     )
     Dialog(onDismissRequest = onDismiss) {
         Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surface, tonalElevation = 6.dp) {
             Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    "At what time?",
+                    title,
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -463,7 +620,7 @@ private fun TimeDialog(onDismiss: () -> Unit, onPicked: (LocalTime) -> Unit) {
                 TimePicker(state = state)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = onDismiss) { Text("Cancel") }
-                    TextButton(onClick = { onPicked(LocalTime.of(state.hour, state.minute)) }) { Text("Add alert") }
+                    TextButton(onClick = { onPicked(LocalTime.of(state.hour, state.minute)) }) { Text(confirmLabel) }
                 }
             }
         }
